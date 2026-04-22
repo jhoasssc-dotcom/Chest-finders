@@ -1,4 +1,4 @@
---[[ Chest Finder v11.3 - Corrigido, com velocidade e deleta baús de grupo --]]
+--[[ Chest Finder v11.4 - Ignora e deleta baús da loja (Robux) e recompensas --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -22,27 +22,59 @@ local function setSpeed(s)
     end
 end
 
--- Deletar baús ruins (grupo, presente, fuse, etc)
-local function deletarRuins()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        local nome = string.lower(obj.Name or "")
-        local ruim = false
-        for _, p in ipairs({"free","gift","presente","reward","fuse","shop","group","grupo","daily","weekly","yellow","gold"}) do
-            if string.find(nome, p) then ruim = true break end
+-- 🔍 Verifica se um objeto ou qualquer ancestral é proibido (loja, recompensa, etc.)
+local function isProibido(obj)
+    local atual = obj
+    for i = 1, 5 do
+        if not atual then break end
+        local nome = string.lower(atual.Name or "")
+        -- Palavras proibidas
+        local palavras = {"free","gift","presente","reward","recompensa","brinde","bonus","daily","diario","weekly",
+                          "shop","loja","store","buy","comprar","venda","roblox","robux","premium","vip",
+                          "fuse","set","event","starter","iniciante","beginner","pack","pacote","tutorial",
+                          "yellow","amarelo","gold","dourado","golden","ouro","group","grupo","clan","guild"}
+        for _, p in ipairs(palavras) do
+            if string.find(nome, p) then
+                return true
+            end
         end
-        if ruim and (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
-            pcall(function() obj:Destroy() end)
+        -- Verifica se tem preço (loja)
+        if atual:FindFirstChild("Price") or atual:FindFirstChild("RobuxPrice") or atual:FindFirstChild("Cost") then
+            return true
         end
+        atual = atual.Parent
     end
+    return false
 end
 
--- Verificar se baú é permitido (common, rare, legendary, rainbow ou genérico)
-local function isPermitido(obj)
-    local nome = string.lower(obj.Name or "")
-    if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
-    for _, p in ipairs({"free","gift","presente","reward","fuse","shop","group","grupo","yellow","gold","daily","weekly"}) do
-        if string.find(nome, p) then return false end
+-- 🗑️ Deleta todos os baús ruins (loja, recompensa, etc.)
+local function deletarRuins()
+    local deletados = 0
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        local nome = string.lower(obj.Name or "")
+        -- Só considera se for um baú (tem chest no nome ou tem ClickDetector)
+        if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
+            if isProibido(obj) then
+                pcall(function() obj:Destroy() end)
+                deletados = deletados + 1
+            end
+        end
     end
+    if deletados > 0 then print("🗑️ Deletados", deletados, "baús ruins (loja/recompensa)") end
+end
+
+-- ✅ Verifica se o baú é permitido (não é proibido e é do tipo desejado)
+local function isPermitido(obj)
+    -- Primeiro, verifica se é baú (tem chest no nome)
+    local nome = string.lower(obj.Name or "")
+    if not (string.find(nome, "chest") or string.find(nome, "bau")) then
+        return false
+    end
+    -- Se for proibido (loja, recompensa), não permite
+    if isProibido(obj) then
+        return false
+    end
+    -- Permite qualquer baú que não seja proibido (inclui Common, Rare, Legendary, Rainbow)
     return true
 end
 
@@ -73,7 +105,7 @@ local function acharChests()
     return lista
 end
 
--- GUI
+-- GUI (mesma da versão anterior, vou reutilizar para não estender muito)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -123,7 +155,7 @@ local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, -60, 0, 30)
 titulo.Position = UDim2.new(0, 5, 0, 0)
 titulo.BackgroundTransparency = 1
-titulo.Text = "🎁 Chest Finder v11.3"
+titulo.Text = "🎁 Chest Finder v11.4"
 titulo.TextColor3 = Color3.fromRGB(0, 255, 255)
 titulo.TextSize = 12
 titulo.Font = Enum.Font.GothamBold
@@ -294,7 +326,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🗑️ Deletando: Free Gift, Presente, Fuse, Shop, Grupo\n✅ Pegando: Common, Rare, Legendary, Rainbow"
+infoText.Text = "🗑️ Deletando: baús da loja (Robux), recompensas, grupo\n✅ Pegando: Common, Rare, Legendary, Rainbow (do mapa)"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
@@ -430,7 +462,7 @@ local function iniciarLoop()
     loop = task.spawn(function()
         while auto do
             if hum and hum.Health > 0 then
-                deletarRuins()
+                deletarRuins()  -- Deleta baús da loja e recompensas
                 local chests = acharChests()
                 if #chests > 0 then
                     mover(chests[1])
@@ -514,7 +546,7 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON")
+        avisar("✅ Auto Chest ON - Ignorando loja/recompensas")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -569,11 +601,11 @@ task.spawn(function()
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v11.3 carregado!")
-    avisar("🚀 Auto Chest ON | Deletando baús de grupo")
+    print("✅ Chest Finder v11.4 - Ignora e deleta baús da loja (Robux) e recompensas")
+    avisar("🚀 Auto Chest ON | Deletando baús da loja e recompensas")
 end)
 
--- Animação simples da borda
+-- Animação
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
