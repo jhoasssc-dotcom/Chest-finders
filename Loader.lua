@@ -595,3 +595,17 @@ task.spawn(function()
     print("✅ Chest Finder v13.0 - Loop infinito corrigido!")
     avisar("🚀 Auto Chest ON - Coletando baús com contorno")
 end)
+
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.05 do
+            local t = 0.5 + math.sin(i * math.pi) * 0.5
+            borda.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            if bola.Visible then
+                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            end
+            task.wait(0.05)
+        end
+    end
+end)
+```
