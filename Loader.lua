@@ -11,6 +11,8 @@ local rootPart = char:WaitForChild("HumanoidRootPart")
 local auto = true
 local coletados = 0
 local velocidade = 50
+local loopRodando = false
+local loopTask = nil
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -123,12 +125,12 @@ gui.Parent = player:WaitForChild("PlayerGui")
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.ResetOnSpawn = false
 
--- Bolinha (olho com risco 👁️‍🗨️)
+-- Bolinha (olho com risco)
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 45, 0, 45)
 bola.Position = UDim2.new(0, 10, 0, 100)
 bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-bola.Image = "rbxassetid://6031094839"  -- Ícone de olho
+bola.Image = "rbxassetid://6031094839"
 bola.ImageColor3 = Color3.fromRGB(200, 200, 200)
 bola.Visible = false
 bola.Parent = gui
@@ -137,7 +139,6 @@ local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Texto do risco no olho (efeito visual)
 local risco = Instance.new("TextLabel")
 risco.Size = UDim2.new(1, 0, 1, 0)
 risco.BackgroundTransparency = 1
@@ -148,7 +149,7 @@ risco.TextWrapped = true
 risco.Visible = true
 risco.Parent = bola
 
--- Frame principal - HORIZONTAL
+-- Frame principal
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 500, 0, 160)
 frame.Position = UDim2.new(0.5, -250, 0.5, -80)
@@ -246,8 +247,6 @@ fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
 -- ========== CONTEÚDO DA ABA MAIN ==========
-
--- Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 230, 0, 35)
 autoBtn.Position = UDim2.new(0, 10, 0, 40)
@@ -262,7 +261,6 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
--- Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 230, 0, 35)
 afkBtn.Position = UDim2.new(1, -240, 0, 40)
@@ -277,7 +275,6 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 350, 0, 40)
 speedFrame.Position = UDim2.new(0, 10, 0, 85)
@@ -349,7 +346,6 @@ local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
--- Status
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(0, 480, 0, 30)
 statusFrame.Position = UDim2.new(0.5, -240, 0, 128)
@@ -498,26 +494,17 @@ end
 -- ========== FUNÇÃO DE PULO ==========
 local function pular()
     if hum and rootPart then
-        -- Verifica se está no chão antes de pular
-        local character = hum.Parent
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        hum.Jump = true
+        task.wait(0.1)
+        hum.Jump = false
         
-        if humanoidRootPart then
-            -- Aplica força de pulo
-            local bodyVelocity = Instance.new("BodyVelocity")
-            bodyVelocity.Velocity = Vector3.new(0, 50, 0)
-            bodyVelocity.MaxForce = Vector3.new(0, 10000, 0)
-            bodyVelocity.Parent = humanoidRootPart
-            
-            -- Remove após 0.3 segundos
-            task.wait(0.3)
-            bodyVelocity:Destroy()
-            
-            -- Alternativa: usar o Jump do Humanoid
-            hum.Jump = true
-            task.wait(0.1)
-            hum.Jump = false
-        end
+        -- Força extra
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 45, 0)
+        bodyVelocity.MaxForce = Vector3.new(0, 10000, 0)
+        bodyVelocity.Parent = rootPart
+        task.wait(0.2)
+        bodyVelocity:Destroy()
     end
 end
 
@@ -595,19 +582,121 @@ bola.MouseButton1Click:Connect(function()
     avisar("📂 Restaurado")
 end)
 
--- Auto Chest
+-- ========== LOOP CORRIGIDO (NÃO PARA MAIS) ==========
+
+-- Função para coletar um baú específico
+local function coletarBaú(chest)
+    if not chest or not hum or not chest.obj or not chest.obj.Parent then 
+        return false 
+    end
+    
+    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+    
+    -- Cria o caminho
+    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
+    local success, err = pcall(function() 
+        path:ComputeAsync(char:GetPivot().Position, chest.pos) 
+    end)
+    
+    if not success or path.Status ~= Enum.PathStatus.Success then
+        statusText.Text = "⚠️ Caminho bloqueado!"
+        return false
+    end
+    
+    -- Segue o caminho
+    local waypoints = path:GetWaypoints()
+    for _, waypoint in ipairs(waypoints) do
+        if not auto then break end
+        hum:MoveTo(waypoint.Position)
+        hum.MoveToFinished:Wait(1)
+    end
+    
+    -- Verifica distância final
+    local distFinal = (rootPart.Position - chest.pos).Magnitude
+    if distFinal < 20 then
+        pular()
+        task.wait(0.3)
+    end
+    
+    -- Tenta coletar
+    if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+        coletados = coletados + 1
+        avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
+        statusText.Text = "✅ " .. chest.tipo .. " coletado!"
+        
+        local click = chest.obj:FindFirstChild("ClickDetector")
+        if click then
+            click:Click()
+        else
+            local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
+            if parte then 
+                fireclickdetector(parte)
+            end
+        end
+        return true
+    end
+    
+    return false
+end
+
+-- Loop principal (roda infinitamente)
+local function iniciarLoop()
+    -- Se já tem um loop rodando, cancela ele primeiro
+    if loopTask then
+        task.cancel(loopTask)
+        loopTask = nil
+    end
+    
+    loopTask = task.spawn(function()
+        print("🔄 Loop iniciado!")
+        while auto do
+            if hum and hum.Health > 0 then
+                -- Deleta baús ruins
+                deletarRuins()
+                
+                -- Procura baús válidos
+                local chests = acharChests()
+                
+                if #chests > 0 then
+                    -- Pega o melhor baú
+                    local alvo = chests[1]
+                    coletarBaú(alvo)
+                else
+                    statusText.Text = "🔍 Nenhum baú com contorno..."
+                end
+            else
+                statusText.Text = "💀 Aguardando revive..."
+            end
+            task.wait(1) -- Espera 1 segundo antes de procurar de novo
+        end
+        print("🔄 Loop finalizado!")
+    end)
+end
+
+-- Parar o loop
+local function pararLoop()
+    if loopTask then
+        task.cancel(loopTask)
+        loopTask = nil
+        print("⏹️ Loop parado!")
+    end
+end
+
+-- Toggle Auto Chest (CORRIGIDO)
 autoBtn.MouseButton1Click:Connect(function()
     auto = not auto
+    print("🔘 Auto Chest clicado - Novo estado:", auto)
+    
     if auto then
         autoBtn.Text = "🔍 Auto Chest: ON"
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Só pega baús com contorno")
+        avisar("✅ Auto Chest ON - Coletando continuamente!")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if loop then task.cancel(loop) end
+        pararLoop()
         statusText.Text = "⏸️ DESATIVADO"
         avisar("❌ Auto Chest OFF")
     end
@@ -615,10 +704,11 @@ end)
 
 -- Anti AFK
 local afkAtivo = false
-local afkLoop
+local afkLoopTask
 
 local function iniciarAFK()
-    afkLoop = task.spawn(function()
+    if afkLoopTask then task.cancel(afkLoopTask) end
+    afkLoopTask = task.spawn(function()
         while afkAtivo do
             task.wait(240)
             if afkAtivo then
@@ -641,6 +731,8 @@ end
 
 afkBtn.MouseButton1Click:Connect(function()
     afkAtivo = not afkAtivo
+    print("🔘 Anti-AFK clicado - Estado:", afkAtivo)
+    
     if afkAtivo then
         afkBtn.Text = "💤 Anti-AFK: ON"
         afkBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
@@ -649,7 +741,7 @@ afkBtn.MouseButton1Click:Connect(function()
     else
         afkBtn.Text = "💤 Anti-AFK: OFF"
         afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if afkLoop then task.cancel(afkLoop) end
+        if afkLoopTask then task.cancel(afkLoopTask) end
         avisar("💪 Anti-AFK OFF")
     end
 end)
@@ -659,77 +751,19 @@ resetBtn.MouseButton1Click:Connect(function()
     avisar("↺ Velocidade resetada para 16")
 end)
 
--- Loop de movimento (COM PULO QUANDO CHEGA NO BAÚ)
-local loop
-local function mover(chest)
-    if not chest or not hum then return end
-    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
-    
-    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
-    
-    if ok and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
-            if not auto then break end
-            hum:MoveTo(wp.Position)
-            hum.MoveToFinished:Wait(1)
-        end
-        
-        -- 🔥 PULA QUANDO CHEGA PERTO DO BAÚ (para alcançar baús no mar/plataformas)
-        local distToChest = (rootPart.Position - chest.pos).Magnitude
-        if distToChest < 15 then
-            pular()
-            task.wait(0.2)
-        end
-        
-        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
-            coletados = coletados + 1
-            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. " coletado!"
-            
-            -- Tenta clicar no baú
-            local click = chest.obj:FindFirstChild("ClickDetector")
-            if click then
-                click:Click()
-            else
-                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then fireclickdetector(parte) end
-            end
-        end
-    else
-        statusText.Text = "⚠️ Caminho bloqueado!"
-    end
-end
-
-local function iniciarLoop()
-    if loop then task.cancel(loop) end
-    loop = task.spawn(function()
-        while auto do
-            if hum and hum.Health > 0 then
-                deletarRuins()
-                local chests = acharChests()
-                if #chests > 0 then
-                    mover(chests[1])
-                else
-                    statusText.Text = "🔍 Nenhum baú com contorno..."
-                end
-            end
-            task.wait(1)
-        end
-    end)
-end
-
--- Iniciar
+-- Iniciar tudo
 task.spawn(function()
     wait(2)
     setSpeed(50)
     deletarRuins()
-    iniciarLoop()
-    print("✅ Chest Finder v13 - Com Pulo Automático | Velocidade 50")
-    avisar("🚀 Com pulo automático para pegar baús no mar!")
+    if auto then
+        iniciarLoop()
+    end
+    print("✅ Chest Finder v13 - CORRIGIDO! Loop infinito funcionando!")
+    avisar("🚀 Script corrigido! Coleta contínua ativada!")
 end)
 
--- Animação
+-- Animação da borda
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
