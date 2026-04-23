@@ -9,7 +9,7 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 16
+local velocidade = 50
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
