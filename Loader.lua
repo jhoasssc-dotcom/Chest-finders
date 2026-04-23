@@ -592,4 +592,6 @@ task.spawn(function()
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13.0 - Loop infini
+    print("✅ Chest Finder v13.0 - Loop infinito corrigido!")
+    avisar("🚀 Auto Chest ON - Coletando baús com contorno")
+end)
