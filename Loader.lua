@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Loop Infinito (Nunca para) --]]
+--[[ Chest Finder v13.0 - Corrigido (Pulo + Loop Contínuo) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -8,10 +8,9 @@ local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 local rootPart = char:WaitForChild("HumanoidRootPart")
 
-local auto = true  -- Controle do botão
+local auto = true
 local coletados = 0
 local velocidade = 50
-local loopAtivo = true  -- Loop SEMPRE rodando
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -114,12 +113,22 @@ local function acharChests()
     return lista
 end
 
--- Pulo
+-- ========== FUNÇÃO DE PULO (CORRIGIDA) ==========
 local function pular()
-    if hum then
+    if hum and rootPart then
+        -- Pulo principal
         hum.Jump = true
-        task.wait(0.1)
+        task.wait(0.15)
         hum.Jump = false
+        
+        -- Força extra para subir mais alto
+        local bodyVel = Instance.new("BodyVelocity")
+        bodyVel.Velocity = Vector3.new(0, 55, 0)
+        bodyVel.MaxForce = Vector3.new(0, 10000, 0)
+        bodyVel.Parent = rootPart
+        
+        task.wait(0.25)
+        bodyVel:Destroy()
     end
 end
 
@@ -537,74 +546,100 @@ end)
 
 resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
 
--- ========== LOOP INFINITO (NUNCA PARA) ==========
--- Esta função roda para SEMPRE, independente do botão
-local function mover(chest)
-    if not chest or not hum then return end
+-- ========== LOOP PRINCIPAL CORRIGIDO ==========
+
+-- Função para mover até o baú e coletar
+local function moverEcoletar(chest)
+    if not chest or not chest.obj or not chest.obj.Parent then 
+        return false 
+    end
+    
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
     
+    -- Cria o caminho
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local ok = pcall(function() path:ComputeAsync(rootPart.Position, chest.pos) end)
+    local success = pcall(function() 
+        path:ComputeAsync(rootPart.Position, chest.pos) 
+    end)
     
-    if ok and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
-            if not auto then break end  -- Só para se o botão estiver OFF
-            hum:MoveTo(wp.Position)
-            hum.MoveToFinished:Wait(1)
-        end
-        
-        -- Pulo ao chegar perto
-        if (rootPart.Position - chest.pos).Magnitude < 15 then
-            pular()
-            task.wait(0.2)
-        end
-        
-        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
-            coletados = coletados + 1
-            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. " coletado!"
-            
-            local click = chest.obj:FindFirstChild("ClickDetector")
-            if click then
-                click:Click()
-            else
-                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then fireclickdetector(parte) end
-            end
-            task.wait(0.3)
-        end
-    else
+    if not success or path.Status ~= Enum.PathStatus.Success then
         statusText.Text = "⚠️ Caminho bloqueado!"
+        return false
     end
+    
+    -- Segue o caminho
+    local waypoints = path:GetWaypoints()
+    for i, waypoint in ipairs(waypoints) do
+        if not auto then break end
+        hum:MoveTo(waypoint.Position)
+        hum.MoveToFinished:Wait(0.5)
+    end
+    
+    -- Verifica distância final
+    local distanciaFinal = (rootPart.Position - chest.pos).Magnitude
+    print("📏 Distância do baú:", distanciaFinal)
+    
+    -- PULA quando chegar perto (independente de onde estiver)
+    if distanciaFinal < 20 then
+        print("🏃 Pulando para alcançar o baú!")
+        pular()
+        task.wait(0.3)
+    end
+    
+    -- Tenta coletar
+    if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+        coletados = coletados + 1
+        avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
+        statusText.Text = "✅ " .. chest.tipo .. " coletado!"
+        
+        local click = chest.obj:FindFirstChild("ClickDetector")
+        if click then
+            click:Click()
+        else
+            local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
+            if parte then 
+                fireclickdetector(parte)
+            end
+        end
+        return true
+    end
+    
+    return false
 end
 
--- LOOP PRINCIPAL - RODA PARA SEMPRE
+-- LOOP INFINITO - RODA PARA SEMPRE
 task.spawn(function()
-    print("🔄 Loop infinito iniciado - NUNCA vai parar!")
-    while loopAtivo do  -- loopAtivo é sempre true
-        if hum and hum.Health > 0 then
+    print("🔄 Loop infinito iniciado!")
+    
+    while true do
+        if auto and hum and hum.Health > 0 then
+            -- Deleta baús ruins
             deletarRuins()
+            
+            -- Procura baús
             local chests = acharChests()
+            
             if #chests > 0 then
-                mover(chests[1])
+                local alvo = chests[1]
+                print("🎯 Alvo encontrado:", alvo.tipo, "- Distância:", math.floor(alvo.dist))
+                moverEcoletar(alvo)
             else
-                if auto then
-                    statusText.Text = "🔍 Nenhum baú com contorno..."
-                else
-                    statusText.Text = "⏸️ Auto Chest DESATIVADO - Aguardando..."
-                end
+                statusText.Text = "🔍 Nenhum baú com contorno..."
             end
-        else
+        elseif not auto then
+            statusText.Text = "⏸️ Auto Chest DESATIVADO"
+        elseif hum and hum.Health <= 0 then
             statusText.Text = "💀 Aguardando revive..."
         end
-        task.wait(1)
+        
+        task.wait(0.5) -- Pequena pausa para não sobrecarregar
     end
 end)
 
--- Toggle Auto Chest (SÓ MUDA A VARIÁVEL, NÃO INTERROMPE O LOOP)
+-- Toggle Auto Chest
 autoBtn.MouseButton1Click:Connect(function()
     auto = not auto
-    print("🔘 Auto Chest - Estado:", auto)
+    print("🔘 Auto Chest:", auto)
     
     if auto then
         autoBtn.Text = "🔍 Auto Chest: ON"
@@ -665,8 +700,8 @@ task.spawn(function()
     wait(1)
     setSpeed(50)
     deletarRuins()
-    print("✅ Chest Finder v13 - Loop INFINITO! Nunca para!")
-    avisar("🚀 Loop infinito ativado!")
+    print("✅ Chest Finder v13 - Totalmente corrigido!")
+    avisar("🚀 Script corrigido! Pulo e loop contínuo!")
 end)
 
 -- Animação
