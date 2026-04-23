@@ -123,26 +123,33 @@ local function acharChests()
     return lista
 end
 
--- GUI
+-- GUI - CORRIGIDA: Agora fica na frente e os botões são móveis
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global  -- CORRIGIDO: Fica na frente de tudo
+gui.ResetOnSpawn = false  -- CORRIGIDO: Não desaparece ao morrer
 
--- Bolinha
+-- Bolinha (botão minimizado) - CORRIGIDO: Agora é móvel
 local bola = Instance.new("ImageButton")
-bola.Size = UDim2.new(0, 45, 0, 45)
+bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
 bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 bola.Image = "rbxassetid://3926305904"
 bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
 bola.Visible = false
+bola.Active = true
+bola.Draggable = false  -- Vamos fazer o drag manualmente
 bola.Parent = gui
+
+-- Garantir que a bolinha fique na frente
+bola.ZIndex = 10
 
 local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Frame principal
+-- Frame principal - CORRIGIDO: Agora é móvel pela barra
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 340, 0, 450)
 frame.Position = UDim2.new(0.5, -170, 0.5, -225)
@@ -150,7 +157,12 @@ frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Visible = true
+frame.Active = true
+frame.Draggable = false  -- Vamos fazer o drag manualmente
 frame.Parent = gui
+
+-- Garantir que o frame fique na frente
+frame.ZIndex = 10
 
 local frameC = Instance.new("UICorner")
 frameC.CornerRadius = UDim.new(0, 10)
@@ -161,12 +173,14 @@ borda.Size = UDim2.new(1, 0, 1, 0)
 borda.BackgroundTransparency = 1
 borda.BorderSizePixel = 2
 borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
+borda.ZIndex = 10
 borda.Parent = frame
 
--- Barra de título
+-- Barra de título (para arrastar o frame)
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
+barra.ZIndex = 11
 barra.Parent = frame
 
 local titulo = Instance.new("TextLabel")
@@ -218,6 +232,7 @@ autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 autoBtn.TextSize = 13
 autoBtn.Font = Enum.Font.GothamSemibold
 autoBtn.Parent = frame
+autoBtn.ZIndex = 10
 
 local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
@@ -233,6 +248,7 @@ afkBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 afkBtn.TextSize = 13
 afkBtn.Font = Enum.Font.GothamSemibold
 afkBtn.Parent = frame
+afkBtn.ZIndex = 10
 
 local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
@@ -245,6 +261,7 @@ speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
 speedFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 speedFrame.BackgroundTransparency = 0.3
 speedFrame.Parent = frame
+speedFrame.ZIndex = 10
 
 local speedC = Instance.new("UICorner")
 speedC.CornerRadius = UDim.new(0, 6)
@@ -260,6 +277,7 @@ speedLabel.TextSize = 11
 speedLabel.Font = Enum.Font.GothamBold
 speedLabel.TextXAlignment = Enum.TextXAlignment.Left
 speedLabel.Parent = speedFrame
+speedLabel.ZIndex = 10
 
 local sliderBg = Instance.new("Frame")
 sliderBg.Size = UDim2.new(0, 170, 0, 5)
@@ -267,6 +285,7 @@ sliderBg.Position = UDim2.new(0, 75, 0.5, -2.5)
 sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 sliderBg.BorderSizePixel = 0
 sliderBg.Parent = speedFrame
+sliderBg.ZIndex = 10
 
 local sliderBgC = Instance.new("UICorner")
 sliderBgC.CornerRadius = UDim.new(1, 0)
@@ -277,6 +296,7 @@ sliderFill.Size = UDim2.new((velocidade - 10) / 90, 0, 1, 0)
 sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = sliderBg
+sliderFill.ZIndex = 10
 
 local sliderBtn = Instance.new("TextButton")
 sliderBtn.Size = UDim2.new(0, 12, 0, 12)
@@ -285,6 +305,7 @@ sliderBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
 sliderBtn.Text = ""
 sliderBtn.BorderSizePixel = 0
 sliderBtn.Parent = sliderBg
+sliderBtn.ZIndex = 11
 
 local speedValueBtn = Instance.new("TextButton")
 speedValueBtn.Size = UDim2.new(0, 45, 0, 28)
@@ -295,6 +316,7 @@ speedValueBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 speedValueBtn.TextSize = 12
 speedValueBtn.Font = Enum.Font.GothamBold
 speedValueBtn.Parent = speedFrame
+speedValueBtn.ZIndex = 10
 
 -- Slider
 local sliderDrag = false
@@ -321,6 +343,7 @@ speedValueBtn.MouseButton1Click:Connect(function()
     edit.Font = Enum.Font.GothamBold
     edit.TextXAlignment = Enum.TextXAlignment.Center
     edit.Parent = speedValueBtn
+    edit.ZIndex = 20
     edit.FocusLost:Connect(function()
         local n = tonumber(edit.Text)
         if n then setSpeed(n) end
@@ -335,6 +358,7 @@ infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
 infoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 infoFrame.BackgroundTransparency = 0.3
 infoFrame.Parent = frame
+infoFrame.ZIndex = 10
 
 local infoC = Instance.new("UICorner")
 infoC.CornerRadius = UDim.new(0, 6)
@@ -350,6 +374,7 @@ infoText.TextSize = 9
 infoText.TextWrapped = true
 infoText.Font = Enum.Font.Gotham
 infoText.Parent = infoFrame
+infoText.ZIndex = 10
 
 -- Status
 local statusFrame = Instance.new("Frame")
@@ -358,6 +383,7 @@ statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
 statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 statusFrame.BackgroundTransparency = 0.3
 statusFrame.Parent = frame
+statusFrame.ZIndex = 10
 
 local statusC = Instance.new("UICorner")
 statusC.CornerRadius = UDim.new(0, 6)
@@ -373,6 +399,7 @@ statusText.TextSize = 10
 statusText.TextWrapped = true
 statusText.Font = Enum.Font.Gotham
 statusText.Parent = statusFrame
+statusText.ZIndex = 10
 
 -- Contador
 local contFrame = Instance.new("Frame")
@@ -381,6 +408,7 @@ contFrame.Position = UDim2.new(0.5, -155, 0, 313)
 contFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 contFrame.BackgroundTransparency = 0.3
 contFrame.Parent = frame
+contFrame.ZIndex = 10
 
 local contC = Instance.new("UICorner")
 contC.CornerRadius = UDim.new(0, 6)
@@ -395,6 +423,7 @@ contText.TextColor3 = Color3.fromRGB(0, 255, 255)
 contText.TextSize = 11
 contText.Font = Enum.Font.Gotham
 contText.Parent = contFrame
+contText.ZIndex = 10
 
 -- Reset
 local resetBtn = Instance.new("TextButton")
@@ -406,6 +435,7 @@ resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
 resetBtn.Parent = frame
+resetBtn.ZIndex = 10
 
 local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
@@ -421,6 +451,7 @@ notifFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 notifFrame.BackgroundTransparency = 0.1
 notifFrame.Visible = false
 notifFrame.Parent = gui
+notifFrame.ZIndex = 20
 
 local notifC = Instance.new("UICorner")
 notifC.CornerRadius = UDim.new(0, 6)
@@ -435,6 +466,7 @@ notifText.TextColor3 = Color3.fromRGB(0, 255, 255)
 notifText.TextSize = 11
 notifText.Font = Enum.Font.Gotham
 notifText.Parent = notifFrame
+notifText.ZIndex = 20
 
 local function avisar(msg)
     notifText.Text = msg
@@ -443,126 +475,41 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔁 FUNÇÃO CORRIGIDA: Agora coleta UM baú e continua procurando
-local coletando = false
-
-local function mover(chest)
-    if coletando then return end
-    coletando = true
+-- 🔁 FUNÇÃO DE MOVER (arrastar) - CORRIGIDA: Agora arrasta corretamente
+local function fazerArrastavel(objeto, botao)
+    local arrastando = false
+    local inicioPos, objetoPos
     
-    if not chest or not hum then 
-        coletando = false
-        return 
-    end
-    
-    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
-    
-    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
-    
-    if ok and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
-            if not auto then break end
-            hum:MoveTo(wp.Position)
-            hum.MoveToFinished:Wait(1)
+    botao.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            arrastando = true
+            inicioPos = input.Position
+            objetoPos = objeto.Position
         end
-        
-        -- Verifica se o baú ainda existe e é válido
-        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
-            coletados = coletados + 1
-            contText.Text = "📊 Coletados: " .. coletados
-            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. " coletado!"
-            
-            -- Tenta clicar no baú
-            local click = chest.obj:FindFirstChild("ClickDetector")
-            if click then
-                click:Click()
-            else
-                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then 
-                    fireclickdetector(parte)
-                end
-            end
-            
-            -- Pequena pausa após coletar
-            task.wait(0.5)
-        end
-    else
-        statusText.Text = "⚠️ Caminho bloqueado!"
-        task.wait(1)
-    end
+    end)
     
-    coletando = false
-end
-
--- 🔁 LOOP PRINCIPAL CORRIGIDO: Continua procurando infinitamente
-local loopTask
-local function iniciarLoop()
-    if loopTask then task.cancel(loopTask) end
-    loopTask = task.spawn(function()
-        while auto do
-            if hum and hum.Health > 0 then
-                -- Deleta baús ruins
-                deletarRuins()
-                
-                -- Procura todos os baús válidos
-                local chests = acharChests()
-                
-                if #chests > 0 then
-                    -- Pega o primeiro da lista (prioridade + distância)
-                    local alvo = chests[1]
-                    mover(alvo)
-                else
-                    statusText.Text = "🔍 Nenhum baú com contorno..."
-                    task.wait(1) -- Espera 1 segundo antes de procurar de novo
-                end
-            else
-                task.wait(1) -- Personagem morto, espera
-            end
+    UserInput.InputChanged:Connect(function(input)
+        if arrastando and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - inicioPos
+            objeto.Position = UDim2.new(
+                objetoPos.X.Scale, 
+                objetoPos.X.Offset + delta.X,
+                objetoPos.Y.Scale, 
+                objetoPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    UserInput.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            arrastando = false
         end
     end)
 end
 
--- Arrastar UI
-local arrastando = false
-local arrastarInicio, frameInicio
-barra.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        arrastando = true
-        arrastarInicio = i.Position
-        frameInicio = frame.Position
-    end
-end)
-UserInput.InputChanged:Connect(function(i)
-    if arrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = i.Position - arrastarInicio
-        frame.Position = UDim2.new(frameInicio.X.Scale, frameInicio.X.Offset + delta.X, frameInicio.Y.Scale, frameInicio.Y.Offset + delta.Y)
-    end
-end)
-UserInput.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
-end)
-
--- Arrastar bolinha
-local bolaArrastando = false
-local bolaInicio, bolaPosInicio
-bola.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        bolaArrastando = true
-        bolaInicio = i.Position
-        bolaPosInicio = bola.Position
-    end
-end)
-UserInput.InputChanged:Connect(function(i)
-    if bolaArrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = i.Position - bolaInicio
-        bola.Position = UDim2.new(bolaPosInicio.X.Scale, bolaPosInicio.X.Offset + delta.X, bolaPosInicio.Y.Scale, bolaPosInicio.Y.Offset + delta.Y)
-    end
-end)
-UserInput.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
-end)
+-- Aplica arrastável no frame (pela barra) e na bolinha
+fazerArrastavel(frame, barra)
+fazerArrastavel(bola, bola)
 
 -- Minimizar
 mini.MouseButton1Click:Connect(function()
@@ -576,11 +523,13 @@ mini.MouseButton1Click:Connect(function()
         avisar("📂 Restaurado")
     end
 end)
+
 fechar.MouseButton1Click:Connect(function()
     frame.Visible = false
     bola.Visible = true
     avisar("📁 Minimizado")
 end)
+
 bola.MouseButton1Click:Connect(function()
     frame.Visible = true
     bola.Visible = false
@@ -644,14 +593,87 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 🔁 LOOP PRINCIPAL CORRIGIDO
+local coletando = false
+local loopTask
+
+local function mover(chest)
+    if coletando then return end
+    coletando = true
+    
+    if not chest or not hum then 
+        coletando = false
+        return 
+    end
+    
+    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+    
+    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
+    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
+    
+    if ok and path.Status == Enum.PathStatus.Success then
+        for _, wp in ipairs(path:GetWaypoints()) do
+            if not auto then break end
+            hum:MoveTo(wp.Position)
+            hum.MoveToFinished:Wait(1)
+        end
+        
+        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+            coletados = coletados + 1
+            contText.Text = "📊 Coletados: " .. coletados
+            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
+            statusText.Text = "✅ " .. chest.tipo .. " coletado!"
+            
+            local click = chest.obj:FindFirstChild("ClickDetector")
+            if click then
+                click:Click()
+            else
+                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
+                if parte then 
+                    fireclickdetector(parte)
+                end
+            end
+            
+            task.wait(0.5)
+        end
+    else
+        statusText.Text = "⚠️ Caminho bloqueado!"
+        task.wait(1)
+    end
+    
+    coletando = false
+end
+
+local function iniciarLoop()
+    if loopTask then task.cancel(loopTask) end
+    loopTask = task.spawn(function()
+        while auto do
+            if hum and hum.Health > 0 then
+                deletarRuins()
+                local chests = acharChests()
+                
+                if #chests > 0 then
+                    local alvo = chests[1]
+                    mover(alvo)
+                else
+                    statusText.Text = "🔍 Nenhum baú com contorno..."
+                    task.wait(1)
+                end
+            else
+                task.wait(1)
+            end
+        end
+    end)
+end
+
 -- Iniciar
 task.spawn(function()
     wait(2)
     setSpeed(50)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Coleta contínua | Velocidade 50")
-    avisar("🚀 Coleta contínua ativada | Velocidade 50")
+    print("✅ Chest Finder v13 - UI na frente | Botões móveis | Velocidade 50")
+    avisar("🚀 UI corrigida | Agora dá pra mover os botões!")
 end)
 
 -- Animação
