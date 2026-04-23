@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Loop infinito corrigido (com waits) --]]
+--[[ Chest Finder v13.0 - Original com loop corrigido (apenas 2 linhas) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -417,7 +417,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔥 FUNÇÃO MOVER CORRIGIDA (com wait após coleta)
+-- 🔥 FUNÇÃO MOVER (apenas com task.wait(0.8) adicionado)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -443,14 +443,14 @@ local function mover(chest)
                 local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
                 if parte then fireclickdetector(parte) end
             end
-            task.wait(0.8)  -- Aguarda o baú ser removido
+            task.wait(0.8)  -- ⬅️ LINHA ADICIONADA (aguarda o baú sumir)
         end
     else
         statusText.Text = "⚠️ Caminho bloqueado!"
     end
 end
 
--- 🔁 LOOP PRINCIPAL CORRIGIDO (com wait de 0.5)
+-- 🔁 LOOP PRINCIPAL (apenas task.wait(1) alterado para 0.5)
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -465,9 +465,8 @@ local function iniciarLoop()
                     statusText.Text = "🔍 Nenhum baú com contorno..."
                 end
             end
-            task.wait(0.5)  -- Pausa mais curta para não sobrecarregar
+            task.wait(0.5)  -- ⬅️ ALTERADO de 1 para 0.5
         end
-        task.wait(0.5)
     end)
 end
 
@@ -592,8 +591,8 @@ task.spawn(function()
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13.0 - Loop infinito corrigido!")
-    avisar("🚀 Auto Chest ON - Coletando baús com contorno")
+    print("✅ Chest Finder v13 - Loop corrigido (aguarda remoção do baú)")
+    avisar("🚀 Auto Chest ON - Coletando vários baús")
 end)
 
 task.spawn(function()
