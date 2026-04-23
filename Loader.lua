@@ -123,14 +123,14 @@ local function acharChests()
     return lista
 end
 
--- GUI - CORRIGIDA: Agora fica na frente e os botões são móveis
+-- GUI - HORIZONTAL (deitada)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global  -- CORRIGIDO: Fica na frente de tudo
-gui.ResetOnSpawn = false  -- CORRIGIDO: Não desaparece ao morrer
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+gui.ResetOnSpawn = false
 
--- Bolinha (botão minimizado) - CORRIGIDO: Agora é móvel
+-- Bolinha (botão minimizado)
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -139,29 +139,23 @@ bola.Image = "rbxassetid://3926305904"
 bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
 bola.Visible = false
 bola.Active = true
-bola.Draggable = false  -- Vamos fazer o drag manualmente
 bola.Parent = gui
-
--- Garantir que a bolinha fique na frente
 bola.ZIndex = 10
 
 local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Frame principal - CORRIGIDO: Agora é móvel pela barra
+-- Frame principal - HORIZONTAL (largura 420, altura 180)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 450)
-frame.Position = UDim2.new(0.5, -170, 0.5, -225)
+frame.Size = UDim2.new(0, 420, 0, 180)
+frame.Position = UDim2.new(0.5, -210, 0.5, -90)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Visible = true
 frame.Active = true
-frame.Draggable = false  -- Vamos fazer o drag manualmente
 frame.Parent = gui
-
--- Garantir que o frame fique na frente
 frame.ZIndex = 10
 
 local frameC = Instance.new("UICorner")
@@ -176,7 +170,7 @@ borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
 borda.ZIndex = 10
 borda.Parent = frame
 
--- Barra de título (para arrastar o frame)
+-- Barra de título (para arrastar)
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
@@ -222,14 +216,15 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- Botão Auto Chest
+-- LINHA 1: Botões Auto Chest + Anti-AFK (lado a lado)
+-- Auto Chest
 local autoBtn = Instance.new("TextButton")
-autoBtn.Size = UDim2.new(0, 310, 0, 35)
-autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
+autoBtn.Size = UDim2.new(0, 200, 0, 35)
+autoBtn.Position = UDim2.new(0, 10, 0, 40)
 autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
 autoBtn.Text = "🔍 Auto Chest: ON"
 autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoBtn.TextSize = 13
+autoBtn.TextSize = 12
 autoBtn.Font = Enum.Font.GothamSemibold
 autoBtn.Parent = frame
 autoBtn.ZIndex = 10
@@ -238,14 +233,14 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
--- Botão Anti-AFK
+-- Anti-AFK
 local afkBtn = Instance.new("TextButton")
-afkBtn.Size = UDim2.new(0, 310, 0, 35)
-afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
+afkBtn.Size = UDim2.new(0, 190, 0, 35)
+afkBtn.Position = UDim2.new(1, -200, 0, 40)
 afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 afkBtn.Text = "💤 Anti-AFK: OFF"
 afkBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-afkBtn.TextSize = 13
+afkBtn.TextSize = 12
 afkBtn.Font = Enum.Font.GothamSemibold
 afkBtn.Parent = frame
 afkBtn.ZIndex = 10
@@ -254,10 +249,10 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- Velocidade
+-- LINHA 2: Velocidade + Reset
 local speedFrame = Instance.new("Frame")
-speedFrame.Size = UDim2.new(0, 310, 0, 50)
-speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
+speedFrame.Size = UDim2.new(0, 250, 0, 40)
+speedFrame.Position = UDim2.new(0, 10, 0, 85)
 speedFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 speedFrame.BackgroundTransparency = 0.3
 speedFrame.Parent = frame
@@ -268,20 +263,20 @@ speedC.CornerRadius = UDim.new(0, 6)
 speedC.Parent = speedFrame
 
 local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0, 60, 1, 0)
-speedLabel.Position = UDim2.new(0, 10, 0, 0)
+speedLabel.Size = UDim2.new(0, 50, 1, 0)
+speedLabel.Position = UDim2.new(0, 5, 0, 0)
 speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "⚡ Velocidade:"
+speedLabel.Text = "⚡"
 speedLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-speedLabel.TextSize = 11
+speedLabel.TextSize = 14
 speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedLabel.TextXAlignment = Enum.TextXAlignment.Center
 speedLabel.Parent = speedFrame
 speedLabel.ZIndex = 10
 
 local sliderBg = Instance.new("Frame")
-sliderBg.Size = UDim2.new(0, 170, 0, 5)
-sliderBg.Position = UDim2.new(0, 75, 0.5, -2.5)
+sliderBg.Size = UDim2.new(0, 120, 0, 5)
+sliderBg.Position = UDim2.new(0, 55, 0.5, -2.5)
 sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 sliderBg.BorderSizePixel = 0
 sliderBg.Parent = speedFrame
@@ -318,7 +313,25 @@ speedValueBtn.Font = Enum.Font.GothamBold
 speedValueBtn.Parent = speedFrame
 speedValueBtn.ZIndex = 10
 
--- Slider
+-- Botão Reset
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size = UDim2.new(0, 80, 0, 28)
+resetBtn.Position = UDim2.new(1, -90, 0, 91)
+resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+resetBtn.Text = "↺ Reset"
+resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+resetBtn.TextSize = 11
+resetBtn.Font = Enum.Font.Gotham
+resetBtn.Parent = frame
+resetBtn.ZIndex = 10
+
+local resetC = Instance.new("UICorner")
+resetC.CornerRadius = UDim.new(0, 5)
+resetC.Parent = resetBtn
+
+resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
+
+-- Slider drag
 local sliderDrag = false
 sliderBtn.MouseButton1Down:Connect(function() sliderDrag = true end)
 UserInput.InputChanged:Connect(function(input)
@@ -351,35 +364,10 @@ speedValueBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Informações
-local infoFrame = Instance.new("Frame")
-infoFrame.Size = UDim2.new(0, 310, 0, 50)
-infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
-infoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-infoFrame.BackgroundTransparency = 0.3
-infoFrame.Parent = frame
-infoFrame.ZIndex = 10
-
-local infoC = Instance.new("UICorner")
-infoC.CornerRadius = UDim.new(0, 6)
-infoC.Parent = infoFrame
-
-local infoText = Instance.new("TextLabel")
-infoText.Size = UDim2.new(1, -10, 1, -10)
-infoText.Position = UDim2.new(0, 5, 0, 5)
-infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas"
-infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
-infoText.TextSize = 9
-infoText.TextWrapped = true
-infoText.Font = Enum.Font.Gotham
-infoText.Parent = infoFrame
-infoText.ZIndex = 10
-
--- Status
+-- LINHA 3: Status
 local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 310, 0, 50)
-statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
+statusFrame.Size = UDim2.new(0, 400, 0, 35)
+statusFrame.Position = UDim2.new(0.5, -200, 0, 133)
 statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 statusFrame.BackgroundTransparency = 0.3
 statusFrame.Parent = frame
@@ -390,8 +378,8 @@ statusC.CornerRadius = UDim.new(0, 6)
 statusC.Parent = statusFrame
 
 local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 1, -10)
-statusText.Position = UDim2.new(0, 5, 0, 5)
+statusText.Size = UDim2.new(1, -10, 1, -5)
+statusText.Position = UDim2.new(0, 5, 0, 2)
 statusText.BackgroundTransparency = 1
 statusText.Text = "✅ Auto Chest ATIVADO!"
 statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
@@ -401,47 +389,15 @@ statusText.Font = Enum.Font.Gotham
 statusText.Parent = statusFrame
 statusText.ZIndex = 10
 
--- Contador
-local contFrame = Instance.new("Frame")
-contFrame.Size = UDim2.new(0, 310, 0, 30)
-contFrame.Position = UDim2.new(0.5, -155, 0, 313)
-contFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-contFrame.BackgroundTransparency = 0.3
-contFrame.Parent = frame
-contFrame.ZIndex = 10
-
-local contC = Instance.new("UICorner")
-contC.CornerRadius = UDim.new(0, 6)
-contC.Parent = contFrame
-
+-- Contador abaixo do status (escondido, mas mantido)
 local contText = Instance.new("TextLabel")
-contText.Size = UDim2.new(1, -10, 1, -10)
-contText.Position = UDim2.new(0, 5, 0, 5)
 contText.BackgroundTransparency = 1
-contText.Text = "📊 Coletados: 0"
+contText.Text = "📊 0"
 contText.TextColor3 = Color3.fromRGB(0, 255, 255)
-contText.TextSize = 11
+contText.TextSize = 10
 contText.Font = Enum.Font.Gotham
-contText.Parent = contFrame
-contText.ZIndex = 10
-
--- Reset
-local resetBtn = Instance.new("TextButton")
-resetBtn.Size = UDim2.new(0, 90, 0, 28)
-resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
-resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Resetar (16)"
-resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-resetBtn.TextSize = 10
-resetBtn.Font = Enum.Font.Gotham
-resetBtn.Parent = frame
-resetBtn.ZIndex = 10
-
-local resetC = Instance.new("UICorner")
-resetC.CornerRadius = UDim.new(0, 5)
-resetC.Parent = resetBtn
-
-resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
+contText.Visible = false
+contText.Parent = frame
 
 -- Notificação
 local notifFrame = Instance.new("Frame")
@@ -475,7 +431,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔁 FUNÇÃO DE MOVER (arrastar) - CORRIGIDA: Agora arrasta corretamente
+-- Função para arrastar
 local function fazerArrastavel(objeto, botao)
     local arrastando = false
     local inicioPos, objetoPos
@@ -507,7 +463,7 @@ local function fazerArrastavel(objeto, botao)
     end)
 end
 
--- Aplica arrastável no frame (pela barra) e na bolinha
+-- Aplica arrastável
 fazerArrastavel(frame, barra)
 fazerArrastavel(bola, bola)
 
@@ -544,7 +500,7 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Coletando continuamente")
+        avisar("✅ Auto Chest ON")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -593,7 +549,7 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 🔁 LOOP PRINCIPAL CORRIGIDO
+-- Loop principal
 local coletando = false
 local loopTask
 
@@ -620,7 +576,6 @@ local function mover(chest)
         
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
-            contText.Text = "📊 Coletados: " .. coletados
             avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
             statusText.Text = "✅ " .. chest.tipo .. " coletado!"
             
@@ -672,8 +627,8 @@ task.spawn(function()
     setSpeed(50)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - UI na frente | Botões móveis | Velocidade 50")
-    avisar("🚀 UI corrigida | Agora dá pra mover os botões!")
+    print("✅ Chest Finder v13 - UI Horizontal | Velocidade 50")
+    avisar("🚀 UI horizontal - arraste pela barra azul")
 end)
 
 -- Animação
