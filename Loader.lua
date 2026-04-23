@@ -9,7 +9,7 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 50  -- ALTERADO: 16 -> 50
+local velocidade = 50
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -24,14 +24,12 @@ end
 
 -- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
 local function temContorno(obj)
-    -- Verifica se o próprio objeto tem Highlight ou SelectionBox como filho
     if obj:FindFirstChildWhichIsA("Highlight") then
         return true
     end
     if obj:FindFirstChildWhichIsA("SelectionBox") then
         return true
     end
-    -- Verifica se alguma parte do modelo tem contorno
     if obj:IsA("Model") then
         for _, part in ipairs(obj:GetDescendants()) do
             if part:IsA("BasePart") and (part:FindFirstChildWhichIsA("Highlight") or part:FindFirstChildWhichIsA("SelectionBox")) then
@@ -42,7 +40,7 @@ local function temContorno(obj)
     return false
 end
 
--- 🚫 Lista de palavras proibidas (caso o contorno falhe)
+-- 🚫 Lista de palavras proibidas
 local proibidas = {
     "presente", "gratuito", "free", "gift", "reward", "recompensa", "brinde",
     "shop", "loja", "store", "buy", "comprar", "roblox", "robux", "premium", "vip",
@@ -50,7 +48,6 @@ local proibidas = {
     "yellow", "amarelo", "gold", "dourado", "group", "grupo", "daily", "weekly", "bonus"
 }
 
--- Verifica se é baú ruim (por nome ou preço)
 local function isRuim(obj)
     local current = obj
     for i = 1, 5 do
@@ -69,13 +66,11 @@ local function isRuim(obj)
     return false
 end
 
--- 🗑️ Deleta baús ruins (sem contorno e com palavras proibidas)
 local function deletarRuins()
     local deletados = 0
     for _, obj in ipairs(workspace:GetDescendants()) do
         local nome = string.lower(obj.Name or "")
         if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
-            -- Se não tem contorno E é ruim, deleta
             if not temContorno(obj) and isRuim(obj) then
                 pcall(function() obj:Destroy() end)
                 deletados = deletados + 1
@@ -85,13 +80,11 @@ local function deletarRuins()
     if deletados > 0 then print("🗑️ Deletados", deletados, "baús sem contorno") end
 end
 
--- ✅ Verifica se o baú é válido (tem contorno E não é ruim)
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
     if not (string.find(nome, "chest") or string.find(nome, "bau")) then
         return false
     end
-    -- Só permite se tiver contorno E não for ruim
     return temContorno(obj) and not isRuim(obj)
 end
 
@@ -130,7 +123,7 @@ local function acharChests()
     return lista
 end
 
--- GUI (igual à versão anterior, mas vou resumir para não estender muito)
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -450,52 +443,83 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- Movimento
+-- 🔁 FUNÇÃO CORRIGIDA: Agora coleta UM baú e continua procurando
+local coletando = false
+
 local function mover(chest)
-    if not chest or not hum then return end
+    if coletando then return end
+    coletando = true
+    
+    if not chest or not hum then 
+        coletando = false
+        return 
+    end
+    
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+    
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
     local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
+    
     if ok and path.Status == Enum.PathStatus.Success then
         for _, wp in ipairs(path:GetWaypoints()) do
             if not auto then break end
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
+        
+        -- Verifica se o baú ainda existe e é válido
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
             avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. "!"
+            statusText.Text = "✅ " .. chest.tipo .. " coletado!"
+            
+            -- Tenta clicar no baú
             local click = chest.obj:FindFirstChild("ClickDetector")
             if click then
                 click:Click()
             else
                 local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then fireclickdetector(parte) end
+                if parte then 
+                    fireclickdetector(parte)
+                end
             end
+            
+            -- Pequena pausa após coletar
+            task.wait(0.5)
         end
     else
         statusText.Text = "⚠️ Caminho bloqueado!"
+        task.wait(1)
     end
+    
+    coletando = false
 end
 
--- Loop
-local loop
+-- 🔁 LOOP PRINCIPAL CORRIGIDO: Continua procurando infinitamente
+local loopTask
 local function iniciarLoop()
-    if loop then task.cancel(loop) end
-    loop = task.spawn(function()
+    if loopTask then task.cancel(loopTask) end
+    loopTask = task.spawn(function()
         while auto do
             if hum and hum.Health > 0 then
+                -- Deleta baús ruins
                 deletarRuins()
+                
+                -- Procura todos os baús válidos
                 local chests = acharChests()
+                
                 if #chests > 0 then
-                    mover(chests[1])
+                    -- Pega o primeiro da lista (prioridade + distância)
+                    local alvo = chests[1]
+                    mover(alvo)
                 else
                     statusText.Text = "🔍 Nenhum baú com contorno..."
+                    task.wait(1) -- Espera 1 segundo antes de procurar de novo
                 end
+            else
+                task.wait(1) -- Personagem morto, espera
             end
-            task.wait(1)
         end
     end)
 end
@@ -571,11 +595,11 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Só pega baús com contorno")
+        avisar("✅ Auto Chest ON - Coletando continuamente")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if loop then task.cancel(loop) end
+        if loopTask then task.cancel(loopTask) end
         statusText.Text = "⏸️ DESATIVADO"
         avisar("❌ Auto Chest OFF")
     end
@@ -623,11 +647,11 @@ end)
 -- Iniciar
 task.spawn(function()
     wait(2)
-    setSpeed(50)  -- ALTERADO: 16 -> 50
+    setSpeed(50)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO")
-    avisar("🚀 Só pega baús com contorno | Deletando os outros")
+    print("✅ Chest Finder v13 - Coleta contínua | Velocidade 50")
+    avisar("🚀 Coleta contínua ativada | Velocidade 50")
 end)
 
 -- Animação
