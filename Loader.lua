@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Original com loop contínuo (apenas 2 linhas alteradas) --]]
+--[[ Chest Finder v13.0 - Só pega baús com contorno (Highlight/SelectionBox) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -22,9 +22,16 @@ local function setSpeed(s)
     end
 end
 
+-- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
 local function temContorno(obj)
-    if obj:FindFirstChildWhichIsA("Highlight") then return true end
-    if obj:FindFirstChildWhichIsA("SelectionBox") then return true end
+    -- Verifica se o próprio objeto tem Highlight ou SelectionBox como filho
+    if obj:FindFirstChildWhichIsA("Highlight") then
+        return true
+    end
+    if obj:FindFirstChildWhichIsA("SelectionBox") then
+        return true
+    end
+    -- Verifica se alguma parte do modelo tem contorno
     if obj:IsA("Model") then
         for _, part in ipairs(obj:GetDescendants()) do
             if part:IsA("BasePart") and (part:FindFirstChildWhichIsA("Highlight") or part:FindFirstChildWhichIsA("SelectionBox")) then
@@ -35,6 +42,7 @@ local function temContorno(obj)
     return false
 end
 
+-- 🚫 Lista de palavras proibidas (caso o contorno falhe)
 local proibidas = {
     "presente", "gratuito", "free", "gift", "reward", "recompensa", "brinde",
     "shop", "loja", "store", "buy", "comprar", "roblox", "robux", "premium", "vip",
@@ -42,13 +50,16 @@ local proibidas = {
     "yellow", "amarelo", "gold", "dourado", "group", "grupo", "daily", "weekly", "bonus"
 }
 
+-- Verifica se é baú ruim (por nome ou preço)
 local function isRuim(obj)
     local current = obj
     for i = 1, 5 do
         if not current then break end
         local nome = string.lower(current.Name or "")
         for _, p in ipairs(proibidas) do
-            if string.find(nome, p) then return true end
+            if string.find(nome, p) then
+                return true
+            end
         end
         if current:FindFirstChild("Price") or current:FindFirstChild("RobuxPrice") or current:FindFirstChild("Cost") then
             return true
@@ -58,20 +69,29 @@ local function isRuim(obj)
     return false
 end
 
+-- 🗑️ Deleta baús ruins (sem contorno e com palavras proibidas)
 local function deletarRuins()
+    local deletados = 0
     for _, obj in ipairs(workspace:GetDescendants()) do
         local nome = string.lower(obj.Name or "")
         if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
+            -- Se não tem contorno E é ruim, deleta
             if not temContorno(obj) and isRuim(obj) then
                 pcall(function() obj:Destroy() end)
+                deletados = deletados + 1
             end
         end
     end
+    if deletados > 0 then print("🗑️ Deletados", deletados, "baús sem contorno") end
 end
 
+-- ✅ Verifica se o baú é válido (tem contorno E não é ruim)
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
-    if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
+    if not (string.find(nome, "chest") or string.find(nome, "bau")) then
+        return false
+    end
+    -- Só permite se tiver contorno E não for ruim
     return temContorno(obj) and not isRuim(obj)
 end
 
@@ -110,11 +130,12 @@ local function acharChests()
     return lista
 end
 
--- GUI
+-- GUI (igual à versão anterior, mas vou resumir para não estender muito)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
 
+-- Bolinha
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 45, 0, 45)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -128,6 +149,7 @@ local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
+-- Frame principal
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 340, 0, 450)
 frame.Position = UDim2.new(0.5, -170, 0.5, -225)
@@ -148,6 +170,7 @@ borda.BorderSizePixel = 2
 borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
 borda.Parent = frame
 
+-- Barra de título
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
@@ -192,6 +215,7 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
+-- Botão Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 310, 0, 35)
 autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
@@ -206,6 +230,7 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
+-- Botão Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 310, 0, 35)
 afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
@@ -220,6 +245,7 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
+-- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 310, 0, 50)
 speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
@@ -277,6 +303,7 @@ speedValueBtn.TextSize = 12
 speedValueBtn.Font = Enum.Font.GothamBold
 speedValueBtn.Parent = speedFrame
 
+-- Slider
 local sliderDrag = false
 sliderBtn.MouseButton1Down:Connect(function() sliderDrag = true end)
 UserInput.InputChanged:Connect(function(input)
@@ -288,8 +315,9 @@ UserInput.InputChanged:Connect(function(input)
 end)
 UserInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-)
+end)
 
+-- Editar velocidade
 speedValueBtn.MouseButton1Click:Connect(function()
     local edit = Instance.new("TextBox")
     edit.Size = UDim2.new(1, 0, 1, 0)
@@ -307,6 +335,7 @@ speedValueBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- Informações
 local infoFrame = Instance.new("Frame")
 infoFrame.Size = UDim2.new(0, 310, 0, 50)
 infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
@@ -322,13 +351,14 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas"
+infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
 infoText.Font = Enum.Font.Gotham
 infoText.Parent = infoFrame
 
+-- Status
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(0, 310, 0, 50)
 statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
@@ -351,6 +381,7 @@ statusText.TextWrapped = true
 statusText.Font = Enum.Font.Gotham
 statusText.Parent = statusFrame
 
+-- Contador
 local contFrame = Instance.new("Frame")
 contFrame.Size = UDim2.new(0, 310, 0, 30)
 contFrame.Position = UDim2.new(0.5, -155, 0, 313)
@@ -372,6 +403,7 @@ contText.TextSize = 11
 contText.Font = Enum.Font.Gotham
 contText.Parent = contFrame
 
+-- Reset
 local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 90, 0, 28)
 resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
@@ -388,6 +420,7 @@ resetC.Parent = resetBtn
 
 resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
 
+-- Notificação
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
 notifFrame.Position = UDim2.new(1, -270, 0, 50)
@@ -417,7 +450,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- Movimento (com task.wait(0.8) adicionado)
+-- Movimento
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -441,14 +474,13 @@ local function mover(chest)
                 local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
                 if parte then fireclickdetector(parte) end
             end
-            task.wait(0.8)  -- ⬅️ ADICIONADO
         end
     else
         statusText.Text = "⚠️ Caminho bloqueado!"
     end
 end
 
--- Loop (com task.wait(0.5) alterado)
+-- Loop
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -463,7 +495,7 @@ local function iniciarLoop()
                     statusText.Text = "🔍 Nenhum baú com contorno..."
                 end
             end
-            task.wait(0.5)  -- ⬅️ ALTERADO de 1 para 0.5
+            task.wait(1)
         end
     end)
 end
@@ -488,6 +520,7 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
 end)
 
+-- Arrastar bolinha
 local bolaArrastando = false
 local bolaInicio, bolaPosInicio
 bola.InputBegan:Connect(function(i)
@@ -507,6 +540,7 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
 end)
 
+-- Minimizar
 mini.MouseButton1Click:Connect(function()
     if frame.Visible then
         frame.Visible = false
@@ -529,6 +563,7 @@ bola.MouseButton1Click:Connect(function()
     avisar("📂 Restaurado")
 end)
 
+-- Toggle Auto Chest
 autoBtn.MouseButton1Click:Connect(function()
     auto = not auto
     if auto then
@@ -546,6 +581,7 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Anti AFK
 local afkAtivo = false
 local afkLoop
 local function iniciarAFK()
@@ -584,15 +620,17 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Iniciar
 task.spawn(function()
     wait(2)
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Loop contínuo ativado")
-    avisar("🚀 Auto Chest ON - Coletando vários baús")
+    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO")
+    avisar("🚀 Só pega baús com contorno | Deletando os outros")
 end)
 
+-- Animação
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
