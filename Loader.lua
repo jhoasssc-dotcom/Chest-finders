@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Loop infinito corrigido --]]
+--[[ Chest Finder v13.0 - Loop infinito corrigido (com waits) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -417,7 +417,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔥 FUNÇÃO MOVER (com wait após coleta)
+-- 🔥 FUNÇÃO MOVER CORRIGIDA (com wait após coleta)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -450,7 +450,7 @@ local function mover(chest)
     end
 end
 
--- 🔁 LOOP PRINCIPAL (com wait menor e pausa extra)
+-- 🔁 LOOP PRINCIPAL CORRIGIDO (com wait de 0.5)
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -465,9 +465,9 @@ local function iniciarLoop()
                     statusText.Text = "🔍 Nenhum baú com contorno..."
                 end
             end
-            task.wait(0.5)  -- Espera 0.5 segundos antes de repetir
+            task.wait(0.5)  -- Pausa mais curta para não sobrecarregar
         end
-        task.wait(0.5)      -- Pausa extra ao final do loop (não interfere)
+        task.wait(0.5)
     end)
 end
 
@@ -608,4 +608,3 @@ task.spawn(function()
         end
     end
 end)
-```
