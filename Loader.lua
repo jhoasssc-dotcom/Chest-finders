@@ -9,7 +9,7 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 50
+local velocidade = 50  -- ALTERADO: 16 -> 50
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -623,7 +623,7 @@ end)
 -- Iniciar
 task.spawn(function()
     wait(2)
-    setSpeed(16)
+    setSpeed(50)  -- ALTERADO: 16 -> 50
     deletarRuins()
     iniciarLoop()
     print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO")
