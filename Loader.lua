@@ -10,6 +10,7 @@ local hum = char:WaitForChild("Humanoid")
 local auto = true
 local coletados = 0
 local velocidade = 50
+local abaAtual = "Main" -- "Main" ou "AutoBuy"
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -22,7 +23,37 @@ local function setSpeed(s)
     end
 end
 
--- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
+-- Função para mostrar/esconder elementos da Main
+local function mostrarAbaMain(mostrar)
+    -- Botões principais
+    if autoBtn then autoBtn.Visible = mostrar end
+    if afkBtn then afkBtn.Visible = mostrar end
+    if speedFrame then speedFrame.Visible = mostrar end
+    if resetBtn then resetBtn.Visible = mostrar end
+    if statusFrame then statusFrame.Visible = mostrar end
+end
+
+local function mostrarAbaAutoBuy(mostrar)
+    if autoBuyFrame then autoBuyFrame.Visible = mostrar end
+end
+
+-- Função para trocar de aba
+local function trocarAba(aba)
+    abaAtual = aba
+    if aba == "Main" then
+        mostrarAbaMain(true)
+        mostrarAbaAutoBuy(false)
+        abaMainBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+        abaAutoBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    else
+        mostrarAbaMain(false)
+        mostrarAbaAutoBuy(true)
+        abaMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        abaAutoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+    end
+end
+
+-- 🔍 Verifica se o objeto tem contorno
 local function temContorno(obj)
     if obj:FindFirstChildWhichIsA("Highlight") then
         return true
@@ -123,14 +154,14 @@ local function acharChests()
     return lista
 end
 
--- GUI - HORIZONTAL (deitada)
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.ResetOnSpawn = false
 
--- Bolinha (botão minimizado)
+-- Bolinha
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -146,10 +177,10 @@ local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Frame principal - HORIZONTAL (largura 420, altura 180)
+-- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 420, 0, 180)
-frame.Position = UDim2.new(0.5, -210, 0.5, -90)
+frame.Size = UDim2.new(0, 420, 0, 220)
+frame.Position = UDim2.new(0.5, -210, 0.5, -110)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
@@ -170,7 +201,7 @@ borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
 borda.ZIndex = 10
 borda.Parent = frame
 
--- Barra de título (para arrastar)
+-- Barra de título
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
@@ -178,7 +209,7 @@ barra.ZIndex = 11
 barra.Parent = frame
 
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -60, 0, 30)
+titulo.Size = UDim2.new(1, -100, 0, 30)
 titulo.Position = UDim2.new(0, 5, 0, 0)
 titulo.BackgroundTransparency = 1
 titulo.Text = "🎁 Chest Finder v13"
@@ -187,6 +218,35 @@ titulo.TextSize = 12
 titulo.Font = Enum.Font.GothamBold
 titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = barra
+
+-- Botões de aba na barra de título
+local abaMainBtn = Instance.new("TextButton")
+abaMainBtn.Size = UDim2.new(0, 45, 0, 22)
+abaMainBtn.Position = UDim2.new(0.5, -50, 0, 4)
+abaMainBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+abaMainBtn.Text = "Main"
+abaMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+abaMainBtn.TextSize = 10
+abaMainBtn.Font = Enum.Font.GothamBold
+abaMainBtn.Parent = barra
+
+local abaMainC = Instance.new("UICorner")
+abaMainC.CornerRadius = UDim.new(0, 4)
+abaMainC.Parent = abaMainBtn
+
+local abaAutoBtn = Instance.new("TextButton")
+abaAutoBtn.Size = UDim2.new(0, 90, 0, 22)
+abaAutoBtn.Position = UDim2.new(0.5, 5, 0, 4)
+abaAutoBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+abaAutoBtn.Text = "Auto Buy/Collect"
+abaAutoBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+abaAutoBtn.TextSize = 9
+abaAutoBtn.Font = Enum.Font.GothamBold
+abaAutoBtn.Parent = barra
+
+local abaAutoC = Instance.new("UICorner")
+abaAutoC.CornerRadius = UDim.new(0, 4)
+abaAutoC.Parent = abaAutoBtn
 
 local mini = Instance.new("TextButton")
 mini.Size = UDim2.new(0, 25, 0, 25)
@@ -216,11 +276,11 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- LINHA 1: Botões Auto Chest + Anti-AFK (lado a lado)
+-- ========== ABA MAIN ==========
 -- Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 200, 0, 35)
-autoBtn.Position = UDim2.new(0, 10, 0, 40)
+autoBtn.Position = UDim2.new(0, 10, 0, 45)
 autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
 autoBtn.Text = "🔍 Auto Chest: ON"
 autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -236,7 +296,7 @@ autoC.Parent = autoBtn
 -- Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 190, 0, 35)
-afkBtn.Position = UDim2.new(1, -200, 0, 40)
+afkBtn.Position = UDim2.new(1, -200, 0, 45)
 afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 afkBtn.Text = "💤 Anti-AFK: OFF"
 afkBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -249,10 +309,10 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- LINHA 2: Velocidade + Reset
+-- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 250, 0, 40)
-speedFrame.Position = UDim2.new(0, 10, 0, 85)
+speedFrame.Position = UDim2.new(0, 10, 0, 90)
 speedFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 speedFrame.BackgroundTransparency = 0.3
 speedFrame.Parent = frame
@@ -313,10 +373,10 @@ speedValueBtn.Font = Enum.Font.GothamBold
 speedValueBtn.Parent = speedFrame
 speedValueBtn.ZIndex = 10
 
--- Botão Reset
+-- Reset
 local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 80, 0, 28)
-resetBtn.Position = UDim2.new(1, -90, 0, 91)
+resetBtn.Position = UDim2.new(1, -90, 0, 96)
 resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 resetBtn.Text = "↺ Reset"
 resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
@@ -330,6 +390,82 @@ resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
 resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
+
+-- Status
+local statusFrame = Instance.new("Frame")
+statusFrame.Size = UDim2.new(0, 400, 0, 35)
+statusFrame.Position = UDim2.new(0.5, -200, 0, 140)
+statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+statusFrame.BackgroundTransparency = 0.3
+statusFrame.Parent = frame
+statusFrame.ZIndex = 10
+
+local statusC = Instance.new("UICorner")
+statusC.CornerRadius = UDim.new(0, 6)
+statusC.Parent = statusFrame
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -10, 1, -5)
+statusText.Position = UDim2.new(0, 5, 0, 2)
+statusText.BackgroundTransparency = 1
+statusText.Text = "✅ Auto Chest ATIVADO!"
+statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
+statusText.TextSize = 10
+statusText.TextWrapped = true
+statusText.Font = Enum.Font.Gotham
+statusText.Parent = statusFrame
+statusText.ZIndex = 10
+
+-- ========== ABA AUTO BUY/COLLECT (Futuro v14.0) ==========
+local autoBuyFrame = Instance.new("Frame")
+autoBuyFrame.Size = UDim2.new(0, 400, 0, 130)
+autoBuyFrame.Position = UDim2.new(0.5, -200, 0, 50)
+autoBuyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+autoBuyFrame.BackgroundTransparency = 0.3
+autoBuyFrame.Visible = false
+autoBuyFrame.Parent = frame
+autoBuyFrame.ZIndex = 10
+
+local autoBuyC = Instance.new("UICorner")
+autoBuyC.CornerRadius = UDim.new(0, 6)
+autoBuyC.Parent = autoBuyFrame
+
+-- Título da aba
+local autoBuyTitle = Instance.new("TextLabel")
+autoBuyTitle.Size = UDim2.new(1, -20, 0, 25)
+autoBuyTitle.Position = UDim2.new(0, 10, 0, 10)
+autoBuyTitle.BackgroundTransparency = 1
+autoBuyTitle.Text = "🛒 Auto Buy / Collect"
+autoBuyTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+autoBuyTitle.TextSize = 14
+autoBuyTitle.Font = Enum.Font.GothamBold
+autoBuyTitle.TextXAlignment = Enum.TextXAlignment.Left
+autoBuyTitle.Parent = autoBuyFrame
+
+-- Texto informativo (versão futura)
+local autoBuyInfo = Instance.new("TextLabel")
+autoBuyInfo.Size = UDim2.new(1, -20, 0, 60)
+autoBuyInfo.Position = UDim2.new(0, 10, 0, 45)
+autoBuyInfo.BackgroundTransparency = 1
+autoBuyInfo.Text = "⚙️ Funções disponíveis na versão 14.0:\n\n• Auto Buy de itens da loja\n• Auto Collect de recompensas\n• Filtro personalizado\n• E muito mais!"
+autoBuyInfo.TextColor3 = Color3.fromRGB(180, 180, 200)
+autoBuyInfo.TextSize = 10
+autoBuyInfo.TextWrapped = true
+autoBuyInfo.Font = Enum.Font.Gotham
+autoBuyInfo.TextXAlignment = Enum.TextXAlignment.Left
+autoBuyInfo.Parent = autoBuyFrame
+
+-- Versão futura (v14.0)
+local versaoText = Instance.new("TextLabel")
+versaoText.Size = UDim2.new(1, -20, 0, 20)
+versaoText.Position = UDim2.new(0, 10, 0, 105)
+versaoText.BackgroundTransparency = 1
+versaoText.Text = "📅 Próxima atualização: v14.0"
+versaoText.TextColor3 = Color3.fromRGB(255, 200, 100)
+versaoText.TextSize = 9
+versaoText.Font = Enum.Font.GothamItalic
+versaoText.TextXAlignment = Enum.TextXAlignment.Left
+versaoText.Parent = autoBuyFrame
 
 -- Slider drag
 local sliderDrag = false
@@ -363,41 +499,6 @@ speedValueBtn.MouseButton1Click:Connect(function()
         edit:Destroy()
     end)
 end)
-
--- LINHA 3: Status
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 400, 0, 35)
-statusFrame.Position = UDim2.new(0.5, -200, 0, 133)
-statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-statusFrame.BackgroundTransparency = 0.3
-statusFrame.Parent = frame
-statusFrame.ZIndex = 10
-
-local statusC = Instance.new("UICorner")
-statusC.CornerRadius = UDim.new(0, 6)
-statusC.Parent = statusFrame
-
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 1, -5)
-statusText.Position = UDim2.new(0, 5, 0, 2)
-statusText.BackgroundTransparency = 1
-statusText.Text = "✅ Auto Chest ATIVADO!"
-statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
-statusText.TextSize = 10
-statusText.TextWrapped = true
-statusText.Font = Enum.Font.Gotham
-statusText.Parent = statusFrame
-statusText.ZIndex = 10
-
--- Contador abaixo do status (escondido, mas mantido)
-local contText = Instance.new("TextLabel")
-contText.BackgroundTransparency = 1
-contText.Text = "📊 0"
-contText.TextColor3 = Color3.fromRGB(0, 255, 255)
-contText.TextSize = 10
-contText.Font = Enum.Font.Gotham
-contText.Visible = false
-contText.Parent = frame
 
 -- Notificação
 local notifFrame = Instance.new("Frame")
@@ -466,6 +567,10 @@ end
 -- Aplica arrastável
 fazerArrastavel(frame, barra)
 fazerArrastavel(bola, bola)
+
+-- Eventos das abas
+abaMainBtn.MouseButton1Click:Connect(function() trocarAba("Main") end)
+abaAutoBtn.MouseButton1Click:Connect(function() trocarAba("AutoBuy") end)
 
 -- Minimizar
 mini.MouseButton1Click:Connect(function()
@@ -627,8 +732,8 @@ task.spawn(function()
     setSpeed(50)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - UI Horizontal | Velocidade 50")
-    avisar("🚀 UI horizontal - arraste pela barra azul")
+    print("✅ Chest Finder v13 - Abas adicionadas | Velocidade 50")
+    avisar("🚀 Versão 13.0 | Aba Auto Buy em breve na v14.0")
 end)
 
 -- Animação
