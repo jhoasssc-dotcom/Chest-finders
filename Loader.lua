@@ -1,4 +1,4 @@
---[[ Chest Finder v14.0 - Auto Chest + Auto Buy/Collect --]]
+--[[ Chest Finder v13.2 - Só pega baús com contorno (Highlight/SelectionBox) + Pulo no baú + Velocidade 50 --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -6,48 +6,20 @@ local UserInput = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
-local rootPart = char:WaitForChild("HumanoidRootPart")
 
--- ========== VARIÁVEIS ==========
-local autoChest = true
-local autoBuy = false
+local auto = true
 local coletados = 0
-local velocidade = 50
+local velocidade = 50 -- ALTERADO: 50 agora é o padrão
 
--- Lista de itens selecionados para Auto Buy
-local selectedItems = {}
-local selectedCategories = {}
-
--- ========== CATEGORIAS E ITENS ==========
-local categories = {
-    ["🌲 Madeira"] = {"Wood", "Wooden Slab", "Wood Planks", "Log"},
-    ["🪨 Pedra"] = {"Stone", "Stone Slab", "Cobblestone", "Granite"},
-    ["⚫ Carvão"] = {"Coal", "Charcoal", "Blackstone"},
-    ["🟤 Terracota"] = {"Terracotta", "Black Terracotta", "Dark Grey Terracotta"},
-    ["🔴 Rubi"] = {"Ruby", "Ruby Chamber", "Ruby Upgrader", "Ruby Conveyor"},
-    ["🟢 Esmeralda"] = {"Emerald", "Emerald Chamber", "Emerald Upgrader", "Emerald Conveyor"},
-    ["🔷 Obsidiana"] = {"Obsidian", "Obsidian Chamber", "Obsidian Upgrader"},
-    ["💜 Plasma"] = {"Plasma", "Plasma Chamber", "Plasma Upgrader"},
-    ["✨ Astral"] = {"Astral", "Astral Collector", "Astral Upgrader"},
-    ["🧪 Radioativo"] = {"Radioactive", "Radioactive Chamber", "Radioactive Upgrader"},
-    ["🌌 Vazio"] = {"Void", "Void Chamber", "Void Upgrader"},
-    ["🍬 Doce"] = {"Candy", "Candy Chamber", "Candy Upgrader"},
-    ["🔥 Infernal"] = {"Infernal", "Infernal Chamber", "Infernal Upgrader"},
-    ["📦 Comum"] = {"Common", "Common Collector", "Common Chamber"},
-    ["🟡 Raro"] = {"Rare", "Rare Collector", "Rare Chamber"},
-    ["🟣 Épico"] = {"Epic", "Epic Collector", "Epic Chamber"},
-    ["🔵 Lendário"] = {"Legendary", "Legendary Collector", "Legendary Chamber"},
-}
-
--- Todos os itens individuais
-local allItems = {}
-for cat, items in pairs(categories) do
-    for _, item in ipairs(items) do
-        table.insert(allItems, {name = item, category = cat})
+-- Função para dar pulo
+local function pular()
+    if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
+        hum.Jump = true
+        task.wait(0.1)
+        hum.Jump = false
     end
 end
 
--- ========== FUNÇÕES DO CHEST FINDER ==========
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
     hum.WalkSpeed = velocidade
@@ -59,9 +31,14 @@ local function setSpeed(s)
     end
 end
 
+-- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
 local function temContorno(obj)
-    if obj:FindFirstChildWhichIsA("Highlight") then return true end
-    if obj:FindFirstChildWhichIsA("SelectionBox") then return true end
+    if obj:FindFirstChildWhichIsA("Highlight") then
+        return true
+    end
+    if obj:FindFirstChildWhichIsA("SelectionBox") then
+        return true
+    end
     if obj:IsA("Model") then
         for _, part in ipairs(obj:GetDescendants()) do
             if part:IsA("BasePart") and (part:FindFirstChildWhichIsA("Highlight") or part:FindFirstChildWhichIsA("SelectionBox")) then
@@ -72,10 +49,12 @@ local function temContorno(obj)
     return false
 end
 
+-- 🚫 Lista de palavras proibidas
 local proibidas = {
     "presente", "gratuito", "free", "gift", "reward", "recompensa", "brinde",
     "shop", "loja", "store", "buy", "comprar", "roblox", "robux", "premium", "vip",
-    "starter", "iniciante", "pack", "pacote", "daily", "weekly", "bonus"
+    "fuse", "set", "event", "starter", "iniciante", "pack", "pacote",
+    "yellow", "amarelo", "gold", "dourado", "group", "grupo", "daily", "weekly", "bonus"
 }
 
 local function isRuim(obj)
@@ -84,7 +63,9 @@ local function isRuim(obj)
         if not current then break end
         local nome = string.lower(current.Name or "")
         for _, p in ipairs(proibidas) do
-            if string.find(nome, p) then return true end
+            if string.find(nome, p) then
+                return true
+            end
         end
         if current:FindFirstChild("Price") or current:FindFirstChild("RobuxPrice") or current:FindFirstChild("Cost") then
             return true
@@ -94,26 +75,48 @@ local function isRuim(obj)
     return false
 end
 
+-- 🗑️ Deleta baús ruins
+local function deletarRuins()
+    local deletados = 0
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        local nome = string.lower(obj.Name or "")
+        if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
+            if not temContorno(obj) and isRuim(obj) then
+                pcall(function() obj:Destroy() end)
+                deletados = deletados + 1
+            end
+        end
+    end
+    if deletados > 0 then print("🗑️ Deletados", deletados, "baús sem contorno") end
+end
+
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
-    if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
+    if not (string.find(nome, "chest") or string.find(nome, "bau")) then
+        return false
+    end
     return temContorno(obj) and not isRuim(obj)
 end
 
 local function getTipo(nome)
     local n = string.lower(nome)
-    if string.find(n, "rainbow") or string.find(n, "arco") then return "🌈 Arco-Íris", 5, "🌈" end
-    if string.find(n, "legendary") or string.find(n, "lendario") then return "🏆 Lendário", 4, "🏆" end
-    if string.find(n, "rare") or string.find(n, "raro") then return "💎 Raro", 3, "💎" end
-    return "📦 Comum", 1, "📦"
+    if string.find(n, "rainbow") or string.find(n, "arco") then
+        return "🌈 Arco-Íris", 5, "🌈"
+    elseif string.find(n, "legendary") or string.find(n, "lendario") then
+        return "🏆 Lendário", 4, "🏆"
+    elseif string.find(n, "rare") or string.find(n, "raro") then
+        return "💎 Raro", 3, "💎"
+    else
+        return "📦 Comum", 1, "📦"
+    end
 end
 
 local function acharChests()
     local lista = {}
-    local posChar = rootPart.Position
+    local posChar = char:GetPivot().Position
     for _, obj in ipairs(workspace:GetDescendants()) do
-        if isPermitido(obj) then
-            local pos = obj:IsA("Model") and obj:GetPivot().Position or (obj:IsA("BasePart") and obj.Position)
+        if isPermitido(obj) and (obj:IsA("BasePart") or obj:IsA("Model")) then
+            local pos = obj:IsA("Model") and obj:GetPivot().Position or obj.Position
             if pos then
                 local tipo, prio, emoji = getTipo(obj.Name)
                 local dist = (posChar - pos).Magnitude
@@ -130,68 +133,17 @@ local function acharChests()
     return lista
 end
 
-local function deletarRuins()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        local nome = string.lower(obj.Name or "")
-        if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
-            if not temContorno(obj) and isRuim(obj) then
-                pcall(function() obj:Destroy() end)
-            end
-        end
-    end
-end
-
-local function pular()
-    if hum and rootPart then
-        hum.Jump = true
-        task.wait(0.15)
-        hum.Jump = false
-        local bodyVel = Instance.new("BodyVelocity")
-        bodyVel.Velocity = Vector3.new(0, 55, 0)
-        bodyVel.MaxForce = Vector3.new(0, 10000, 0)
-        bodyVel.Parent = rootPart
-        task.wait(0.25)
-        bodyVel:Destroy()
-    end
-end
-
--- ========== FUNÇÕES DO AUTO BUY ==========
-local function comprarItem(itemName)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name and string.find(string.lower(obj.Name), string.lower(itemName)) then
-            if obj:FindFirstChild("ClickDetector") then
-                obj.ClickDetector:Click()
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function comprarCategoria(categoryName)
-    local items = categories[categoryName]
-    if items then
-        for _, item in ipairs(items) do
-            comprarItem(item)
-            task.wait(0.5)
-        end
-    end
-end
-
--- ========== GUI REDUZIDA ==========
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-gui.ResetOnSpawn = false
 
--- Bolinha minimizada
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 45, 0, 45)
 bola.Position = UDim2.new(0, 10, 0, 100)
 bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-bola.Image = "rbxassetid://6031094839"
-bola.ImageColor3 = Color3.fromRGB(200, 200, 200)
+bola.Image = "rbxassetid://3926305904"
+bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
 bola.Visible = false
 bola.Parent = gui
 
@@ -199,14 +151,12 @@ local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Frame principal (REDUZIDO)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 500, 0, 350)
-frame.Position = UDim2.new(0.5, -250, 0.5, -175)
+frame.Size = UDim2.new(0, 340, 0, 450)
+frame.Position = UDim2.new(0.5, -170, 0.5, -225)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 frame.BackgroundTransparency = 0.05
-frame.BorderSizePixel = 2
-frame.BorderColor3 = Color3.fromRGB(0, 255, 255)
+frame.BorderSizePixel = 0
 frame.Visible = true
 frame.Parent = gui
 
@@ -214,113 +164,117 @@ local frameC = Instance.new("UICorner")
 frameC.CornerRadius = UDim.new(0, 10)
 frameC.Parent = frame
 
--- Barra de título
+local borda = Instance.new("Frame")
+borda.Size = UDim2.new(1, 0, 1, 0)
+borda.BackgroundTransparency = 1
+borda.BorderSizePixel = 2
+borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
+borda.Parent = frame
+
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
-barra.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+barra.BackgroundTransparency = 1
 barra.Parent = frame
 
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(0, 130, 0, 30)
-titulo.Position = UDim2.new(0, 8, 0, 0)
+titulo.Size = UDim2.new(1, -60, 0, 30)
+titulo.Position = UDim2.new(0, 5, 0, 0)
 titulo.BackgroundTransparency = 1
-titulo.Text = "🎁 Chest Finder v14"
+titulo.Text = "🎁 Chest Finder v13.2"
 titulo.TextColor3 = Color3.fromRGB(0, 255, 255)
-titulo.TextSize = 11
+titulo.TextSize = 12
 titulo.Font = Enum.Font.GothamBold
 titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = barra
 
--- Botões de ABA
-local abaMainBtn = Instance.new("TextButton")
-abaMainBtn.Size = UDim2.new(0, 50, 0, 24)
-abaMainBtn.Position = UDim2.new(0.5, -60, 0, 3)
-abaMainBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 120)
-abaMainBtn.Text = "Main"
-abaMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-abaMainBtn.TextSize = 10
-abaMainBtn.Font = Enum.Font.GothamBold
-abaMainBtn.Parent = barra
-
-local abaAutoBtn = Instance.new("TextButton")
-abaAutoBtn.Size = UDim2.new(0, 85, 0, 24)
-abaAutoBtn.Position = UDim2.new(0.5, 10, 0, 3)
-abaAutoBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-abaAutoBtn.Text = "Auto Buy"
-abaAutoBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-abaAutoBtn.TextSize = 10
-abaAutoBtn.Font = Enum.Font.GothamBold
-abaAutoBtn.Parent = barra
-
--- Botão minimizar
 local mini = Instance.new("TextButton")
 mini.Size = UDim2.new(0, 25, 0, 25)
 mini.Position = UDim2.new(1, -30, 0, 3)
 mini.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 mini.Text = "⬤"
 mini.TextColor3 = Color3.fromRGB(0, 255, 255)
-mini.TextSize = 12
+mini.TextSize = 14
 mini.Font = Enum.Font.GothamBold
 mini.Parent = barra
 
--- Botão fechar
+local miniC = Instance.new("UICorner")
+miniC.CornerRadius = UDim.new(0, 5)
+miniC.Parent = mini
+
 local fechar = Instance.new("TextButton")
 fechar.Size = UDim2.new(0, 25, 0, 25)
 fechar.Position = UDim2.new(1, -58, 0, 3)
 fechar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 fechar.Text = "✕"
 fechar.TextColor3 = Color3.fromRGB(255, 100, 100)
-fechar.TextSize = 12
+fechar.TextSize = 14
 fechar.Font = Enum.Font.GothamBold
 fechar.Parent = barra
 
--- ========== ABA MAIN ==========
--- Auto Chest
-local autoChestBtn = Instance.new("TextButton")
-autoChestBtn.Size = UDim2.new(0, 230, 0, 35)
-autoChestBtn.Position = UDim2.new(0, 12, 0, 45)
-autoChestBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
-autoChestBtn.Text = "🔍 Auto Chest: ON"
-autoChestBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoChestBtn.TextSize = 11
-autoChestBtn.Font = Enum.Font.GothamSemibold
-autoChestBtn.Parent = frame
+local fecharC = Instance.new("UICorner")
+fecharC.CornerRadius = UDim.new(0, 5)
+fecharC.Parent = fechar
 
--- Anti-AFK
+local autoBtn = Instance.new("TextButton")
+autoBtn.Size = UDim2.new(0, 310, 0, 35)
+autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
+autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
+autoBtn.Text = "🔍 Auto Chest: ON"
+autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoBtn.TextSize = 13
+autoBtn.Font = Enum.Font.GothamSemibold
+autoBtn.Parent = frame
+
+local autoC = Instance.new("UICorner")
+autoC.CornerRadius = UDim.new(0, 6)
+autoC.Parent = autoBtn
+
 local afkBtn = Instance.new("TextButton")
-afkBtn.Size = UDim2.new(0, 230, 0, 35)
-afkBtn.Position = UDim2.new(1, -242, 0, 45)
+afkBtn.Size = UDim2.new(0, 310, 0, 35)
+afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
 afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 afkBtn.Text = "💤 Anti-AFK: OFF"
 afkBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-afkBtn.TextSize = 11
+afkBtn.TextSize = 13
 afkBtn.Font = Enum.Font.GothamSemibold
 afkBtn.Parent = frame
 
--- Velocidade
+local afkC = Instance.new("UICorner")
+afkC.CornerRadius = UDim.new(0, 6)
+afkC.Parent = afkBtn
+
 local speedFrame = Instance.new("Frame")
-speedFrame.Size = UDim2.new(0, 300, 0, 38)
-speedFrame.Position = UDim2.new(0, 12, 0, 95)
+speedFrame.Size = UDim2.new(0, 310, 0, 50)
+speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
 speedFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 speedFrame.BackgroundTransparency = 0.3
 speedFrame.Parent = frame
 
+local speedC = Instance.new("UICorner")
+speedC.CornerRadius = UDim.new(0, 6)
+speedC.Parent = speedFrame
+
 local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0, 35, 1, 0)
-speedLabel.Position = UDim2.new(0, 5, 0, 0)
+speedLabel.Size = UDim2.new(0, 60, 1, 0)
+speedLabel.Position = UDim2.new(0, 10, 0, 0)
 speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "⚡"
+speedLabel.Text = "⚡ Velocidade:"
 speedLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-speedLabel.TextSize = 16
+speedLabel.TextSize = 11
 speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
 speedLabel.Parent = speedFrame
 
 local sliderBg = Instance.new("Frame")
-sliderBg.Size = UDim2.new(0, 160, 0, 5)
-sliderBg.Position = UDim2.new(0, 45, 0.5, -2.5)
+sliderBg.Size = UDim2.new(0, 170, 0, 5)
+sliderBg.Position = UDim2.new(0, 75, 0.5, -2.5)
 sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 sliderBg.BorderSizePixel = 0
 sliderBg.Parent = speedFrame
+
+local sliderBgC = Instance.new("UICorner")
+sliderBgC.CornerRadius = UDim.new(1, 0)
+sliderBgC.Parent = sliderBg
 
 local sliderFill = Instance.new("Frame")
 sliderFill.Size = UDim2.new((velocidade - 10) / 90, 0, 1, 0)
@@ -337,244 +291,129 @@ sliderBtn.BorderSizePixel = 0
 sliderBtn.Parent = sliderBg
 
 local speedValueBtn = Instance.new("TextButton")
-speedValueBtn.Size = UDim2.new(0, 50, 0, 28)
-speedValueBtn.Position = UDim2.new(1, -55, 0.5, -14)
+speedValueBtn.Size = UDim2.new(0, 45, 0, 28)
+speedValueBtn.Position = UDim2.new(1, -50, 0.5, -14)
 speedValueBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 speedValueBtn.Text = tostring(velocidade)
 speedValueBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-speedValueBtn.TextSize = 11
+speedValueBtn.TextSize = 12
 speedValueBtn.Font = Enum.Font.GothamBold
 speedValueBtn.Parent = speedFrame
 
+local sliderDrag = false
+sliderBtn.MouseButton1Down:Connect(function() sliderDrag = true end)
+UserInput.InputChanged:Connect(function(input)
+    if sliderDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local pos = input.Position.X - sliderBg.AbsolutePosition.X
+        local p = math.clamp(pos / sliderBg.AbsoluteSize.X, 0, 1)
+        setSpeed(10 + (p * 90))
+    end
+end)
+UserInput.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
+end)
+
+speedValueBtn.MouseButton1Click:Connect(function()
+    local edit = Instance.new("TextBox")
+    edit.Size = UDim2.new(1, 0, 1, 0)
+    edit.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    edit.Text = tostring(velocidade)
+    edit.TextColor3 = Color3.fromRGB(0, 255, 255)
+    edit.TextSize = 12
+    edit.Font = Enum.Font.GothamBold
+    edit.TextXAlignment = Enum.TextXAlignment.Center
+    edit.Parent = speedValueBtn
+    edit.FocusLost:Connect(function()
+        local n = tonumber(edit.Text)
+        if n then setSpeed(n) end
+        edit:Destroy()
+    end)
+end)
+
+local infoFrame = Instance.new("Frame")
+infoFrame.Size = UDim2.new(0, 310, 0, 50)
+infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
+infoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+infoFrame.BackgroundTransparency = 0.3
+infoFrame.Parent = frame
+
+local infoC = Instance.new("UICorner")
+infoC.CornerRadius = UDim.new(0, 6)
+infoC.Parent = infoFrame
+
+local infoText = Instance.new("TextLabel")
+infoText.Size = UDim2.new(1, -10, 1, -10)
+infoText.Position = UDim2.new(0, 5, 0, 5)
+infoText.BackgroundTransparency = 1
+infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas\n🦘 Dá um pulo ao chegar no baú\n⚡ Velocidade padrão: 50"
+infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
+infoText.TextSize = 9
+infoText.TextWrapped = true
+infoText.Font = Enum.Font.Gotham
+infoText.Parent = infoFrame
+
+local statusFrame = Instance.new("Frame")
+statusFrame.Size = UDim2.new(0, 310, 0, 50)
+statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
+statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+statusFrame.BackgroundTransparency = 0.3
+statusFrame.Parent = frame
+
+local statusC = Instance.new("UICorner")
+statusC.CornerRadius = UDim.new(0, 6)
+statusC.Parent = statusFrame
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -10, 1, -10)
+statusText.Position = UDim2.new(0, 5, 0, 5)
+statusText.BackgroundTransparency = 1
+statusText.Text = "✅ Auto Chest ATIVADO!"
+statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
+statusText.TextSize = 10
+statusText.TextWrapped = true
+statusText.Font = Enum.Font.Gotham
+statusText.Parent = statusFrame
+
+local contFrame = Instance.new("Frame")
+contFrame.Size = UDim2.new(0, 310, 0, 30)
+contFrame.Position = UDim2.new(0.5, -155, 0, 313)
+contFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+contFrame.BackgroundTransparency = 0.3
+contFrame.Parent = frame
+
+local contC = Instance.new("UICorner")
+contC.CornerRadius = UDim.new(0, 6)
+contC.Parent = contFrame
+
+local contText = Instance.new("TextLabel")
+contText.Size = UDim2.new(1, -10, 1, -10)
+contText.Position = UDim2.new(0, 5, 0, 5)
+contText.BackgroundTransparency = 1
+contText.Text = "📊 Coletados: 0"
+contText.TextColor3 = Color3.fromRGB(0, 255, 255)
+contText.TextSize = 11
+contText.Font = Enum.Font.Gotham
+contText.Parent = contFrame
+
 local resetBtn = Instance.new("TextButton")
-resetBtn.Size = UDim2.new(0, 85, 0, 28)
-resetBtn.Position = UDim2.new(0, 325, 0, 100)
+resetBtn.Size = UDim2.new(0, 90, 0, 28)
+resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
 resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Reset (16)"
+resetBtn.Text = "↺ Resetar (50)"
 resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
 resetBtn.Parent = frame
 
--- Status
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 476, 0, 38)
-statusFrame.Position = UDim2.new(0.5, -238, 0, 148)
-statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-statusFrame.BackgroundTransparency = 0.3
-statusFrame.Parent = frame
+local resetC = Instance.new("UICorner")
+resetC.CornerRadius = UDim.new(0, 5)
+resetC.Parent = resetBtn
 
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 1, -5)
-statusText.Position = UDim2.new(0, 5, 0, 2)
-statusText.BackgroundTransparency = 1
-statusText.Text = "✅ Auto Chest ATIVADO!"
-statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
-statusText.TextSize = 10
-statusText.Font = Enum.Font.Gotham
-statusText.Parent = statusFrame
+resetBtn.MouseButton1Click:Connect(function() setSpeed(50) end)
 
--- Contador
-local contadorText = Instance.new("TextLabel")
-contadorText.Size = UDim2.new(0, 200, 0, 25)
-contadorText.Position = UDim2.new(0, 12, 0, 200)
-contadorText.BackgroundTransparency = 1
-contadorText.Text = "📊 Coletados: 0"
-contadorText.TextColor3 = Color3.fromRGB(0, 255, 255)
-contadorText.TextSize = 11
-contadorText.Font = Enum.Font.GothamBold
-contadorText.Parent = frame
-
--- ========== ABA AUTO BUY (REDUZIDA) ==========
-local autoBuyFrame = Instance.new("Frame")
-autoBuyFrame.Size = UDim2.new(0, 476, 0, 290)
-autoBuyFrame.Position = UDim2.new(0.5, -238, 0, 45)
-autoBuyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-autoBuyFrame.BackgroundTransparency = 0.2
-autoBuyFrame.Visible = false
-autoBuyFrame.Parent = frame
-
--- Barra de pesquisa
-local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(0, 200, 0, 30)
-searchBox.Position = UDim2.new(0, 10, 0, 10)
-searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-searchBox.Text = "Pesquisar..."
-searchBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-searchBox.TextSize = 11
-searchBox.Font = Enum.Font.Gotham
-searchBox.ClearTextOnFocus = true
-searchBox.Parent = autoBuyFrame
-
--- Botão Auto Buy ON/OFF
-local autoBuyToggle = Instance.new("TextButton")
-autoBuyToggle.Size = UDim2.new(0, 130, 0, 30)
-autoBuyToggle.Position = UDim2.new(1, -140, 0, 10)
-autoBuyToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-autoBuyToggle.Text = "🛒 Auto Buy: OFF"
-autoBuyToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
-autoBuyToggle.TextSize = 10
-autoBuyToggle.Font = Enum.Font.GothamSemibold
-autoBuyToggle.Parent = autoBuyFrame
-
--- ScrollingFrame
-local itemList = Instance.new("ScrollingFrame")
-itemList.Size = UDim2.new(1, -20, 0, 235)
-itemList.Position = UDim2.new(0, 10, 0, 50)
-itemList.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-itemList.BackgroundTransparency = 0.3
-itemList.BorderSizePixel = 0
-itemList.CanvasSize = UDim2.new(0, 0, 0, 0)
-itemList.ScrollBarThickness = 6
-itemList.Parent = autoBuyFrame
-
-local itemListLayout = Instance.new("UIListLayout")
-itemListLayout.Padding = UDim.new(0, 4)
-itemListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-itemListLayout.Parent = itemList
-
--- Função para criar botões
-local function criarBotaoSelecionavel(texto, tipo, valor)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 28)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.Text = texto
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 10
-    btn.Font = Enum.Font.Gotham
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Parent = itemList
-    
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 8)
-    padding.Parent = btn
-    
-    local borda = Instance.new("UICorner")
-    borda.CornerRadius = UDim.new(0, 4)
-    borda.Parent = btn
-    
-    local selectionBorder = Instance.new("Frame")
-    selectionBorder.Size = UDim2.new(1, 0, 1, 0)
-    selectionBorder.BackgroundTransparency = 1
-    selectionBorder.BorderSizePixel = 2
-    selectionBorder.BorderColor3 = Color3.fromRGB(200, 0, 0)
-    selectionBorder.Parent = btn
-    
-    local function atualizarBorda()
-        local selecionado = false
-        if tipo == "categoria" then
-            selecionado = selectedCategories[valor]
-        else
-            selecionado = selectedItems[valor]
-        end
-        
-        if selecionado then
-            selectionBorder.BorderColor3 = Color3.fromRGB(0, 255, 0)
-            btn.BackgroundColor3 = Color3.fromRGB(0, 80, 80)
-        else
-            selectionBorder.BorderColor3 = Color3.fromRGB(200, 0, 0)
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        end
-    end
-    
-    btn.MouseButton1Click:Connect(function()
-        if tipo == "categoria" then
-            selectedCategories[valor] = not selectedCategories[valor]
-            if selectedCategories[valor] then
-                for _, item in ipairs(categories[valor]) do
-                    selectedItems[item] = true
-                end
-            else
-                for _, item in ipairs(categories[valor]) do
-                    selectedItems[item] = nil
-                end
-            end
-        else
-            selectedItems[valor] = not selectedItems[valor]
-        end
-        atualizarBorda()
-    end)
-    
-    atualizarBorda()
-    return btn
-end
-
--- Atualizar lista
-local function atualizarLista(pesquisa)
-    for _, child in ipairs(itemList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    
-    pesquisa = string.lower(pesquisa or "")
-    
-    for catName, items in pairs(categories) do
-        if pesquisa == "" or string.find(string.lower(catName), pesquisa) then
-            criarBotaoSelecionavel("📁 " .. catName, "categoria", catName)
-        end
-    end
-    
-    if pesquisa ~= "" then
-        for _, item in ipairs(allItems) do
-            if string.find(string.lower(item.name), pesquisa) then
-                criarBotaoSelecionavel("📦 " .. item.name, "item", item.name)
-            end
-        end
-    end
-    
-    task.wait()
-    itemList.CanvasSize = UDim2.new(0, 0, 0, itemListLayout.AbsoluteContentSize.Y + 10)
-end
-
-searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    atualizarLista(searchBox.Text)
-end)
-
-atualizarLista("")
-
--- Loop do Auto Buy
-local buyLoop = nil
-local function iniciarBuyLoop()
-    if buyLoop then task.cancel(buyLoop) end
-    buyLoop = task.spawn(function()
-        while autoBuy do
-            for catName, selecionado in pairs(selectedCategories) do
-                if selecionado and autoBuy then
-                    comprarCategoria(catName)
-                    task.wait(1)
-                end
-            end
-            for itemName, selecionado in pairs(selectedItems) do
-                if selecionado and autoBuy then
-                    comprarItem(itemName)
-                    task.wait(0.5)
-                end
-            end
-            task.wait(2)
-        end
-    end)
-end
-
-autoBuyToggle.MouseButton1Click:Connect(function()
-    autoBuy = not autoBuy
-    if autoBuy then
-        autoBuyToggle.Text = "🛒 Auto Buy: ON"
-        autoBuyToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
-        iniciarBuyLoop()
-        avisar("🛒 Auto Buy ON")
-    else
-        autoBuyToggle.Text = "🛒 Auto Buy: OFF"
-        autoBuyToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if buyLoop then task.cancel(buyLoop) end
-        avisar("🛒 Auto Buy OFF")
-    end
-end)
-
--- Notificação
 local notifFrame = Instance.new("Frame")
-notifFrame.Size = UDim2.new(0, 250, 0, 40)
-notifFrame.Position = UDim2.new(1, -260, 0, 60)
+notifFrame.Size = UDim2.new(0, 250, 0, 45)
+notifFrame.Position = UDim2.new(1, -270, 0, 50)
 notifFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 notifFrame.BackgroundTransparency = 0.1
 notifFrame.Visible = false
@@ -590,9 +429,8 @@ notifText.Position = UDim2.new(0, 5, 0, 5)
 notifText.BackgroundTransparency = 1
 notifText.Text = ""
 notifText.TextColor3 = Color3.fromRGB(0, 255, 255)
-notifText.TextSize = 10
+notifText.TextSize = 11
 notifText.Font = Enum.Font.Gotham
-notifText.TextWrapped = true
 notifText.Parent = notifFrame
 
 local function avisar(msg)
@@ -602,224 +440,145 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- ========== LOOP DO CHEST ==========
-local function moverParaChest(chest)
-    if not chest or not chest.obj or not chest.obj.Parent then return false end
-    
+-- MOVIMENTO COM PULO
+local function mover(chest)
+    if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
-    
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local success = pcall(function() 
-        path:ComputeAsync(rootPart.Position, chest.pos) 
-    end)
-    
-    if not success or path.Status ~= Enum.PathStatus.Success then
-        statusText.Text = "⚠️ Caminho bloqueado!"
-        return false
-    end
-    
-    local waypoints = path:GetWaypoints()
-    for i, waypoint in ipairs(waypoints) do
-        if not autoChest then break end
-        hum:MoveTo(waypoint.Position)
-        hum.MoveToFinished:Wait(0.5)
-    end
-    
-    local distFinal = (rootPart.Position - chest.pos).Magnitude
-    if distFinal < 20 then
-        pular()
-        task.wait(0.3)
-    end
-    
-    if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
-        coletados = coletados + 1
-        contadorText.Text = "📊 Coletados: " .. coletados
-        avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-        statusText.Text = "✅ " .. chest.tipo .. " coletado!"
-        
-        local click = chest.obj:FindFirstChild("ClickDetector")
-        if click then
-            click:Click()
-        else
-            local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-            if parte then fireclickdetector(parte) end
+    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
+    if ok and path.Status == Enum.PathStatus.Success then
+        for _, wp in ipairs(path:GetWaypoints()) do
+            if not auto then break end
+            hum:MoveTo(wp.Position)
+            hum.MoveToFinished:Wait(1)
         end
-        return true
+        
+        -- 🦘 PULA AO CHEGAR NO BAÚ
+        pular()
+        task.wait(0.2)
+        
+        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+            coletados = coletados + 1
+            contText.Text = "📊 Coletados: " .. coletados
+            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
+            statusText.Text = "✅ " .. chest.tipo .. "!"
+            local click = chest.obj:FindFirstChild("ClickDetector")
+            if click then
+                click:Click()
+            else
+                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
+                if parte then fireclickdetector(parte) end
+            end
+        end
+    else
+        statusText.Text = "⚠️ Caminho bloqueado!"
     end
-    return false
 end
 
--- Loop principal
-task.spawn(function()
-    print("🔄 Loop do Chest Finder iniciado!")
-    while true do
-        if autoChest and hum and hum.Health > 0 then
-            deletarRuins()
-            local chests = acharChests()
-            if #chests > 0 then
-                moverParaChest(chests[1])
-            else
-                statusText.Text = "🔍 Nenhum baú com contorno..."
+local loop
+local function iniciarLoop()
+    if loop then task.cancel(loop) end
+    loop = task.spawn(function()
+        while auto do
+            if hum and hum.Health > 0 then
+                deletarRuins()
+                local chests = acharChests()
+                if #chests > 0 then
+                    mover(chests[1])
+                else
+                    statusText.Text = "🔍 Nenhum baú com contorno..."
+                end
             end
-        elseif not autoChest then
-            statusText.Text = "⏸️ Auto Chest DESATIVADO"
+            task.wait(1)
         end
-        task.wait(0.5)
-    end
-end)
-
--- ========== EVENTOS ==========
--- Slider
-local sliderDrag = false
-sliderBtn.MouseButton1Down:Connect(function() sliderDrag = true end)
-
-UserInput.InputChanged:Connect(function(input)
-    if sliderDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local pos = input.Position.X - sliderBg.AbsolutePosition.X
-        local p = math.clamp(pos / sliderBg.AbsoluteSize.X, 0, 1)
-        setSpeed(10 + (p * 90))
-    end
-end)
-
-UserInput.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-end)
-
-speedValueBtn.MouseButton1Click:Connect(function()
-    local edit = Instance.new("TextBox")
-    edit.Size = UDim2.new(1, 0, 1, 0)
-    edit.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    edit.Text = tostring(velocidade)
-    edit.TextColor3 = Color3.fromRGB(0, 255, 255)
-    edit.TextSize = 11
-    edit.Font = Enum.Font.GothamBold
-    edit.Parent = speedValueBtn
-    edit.FocusLost:Connect(function()
-        local n = tonumber(edit.Text)
-        if n then setSpeed(n) end
-        edit:Destroy()
     end)
-end)
+end
 
 -- Arrastar UI
-local dragging = false
-local dragStart, frameStart
-
-barra.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        frameStart = frame.Position
+local arrastando = false
+local arrastarInicio, frameInicio
+barra.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        arrastando = true
+        arrastarInicio = i.Position
+        frameInicio = frame.Position
     end
 end)
-
-UserInput.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(frameStart.X.Scale, frameStart.X.Offset + delta.X, frameStart.Y.Scale, frameStart.Y.Offset + delta.Y)
+UserInput.InputChanged:Connect(function(i)
+    if arrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = i.Position - arrastarInicio
+        frame.Position = UDim2.new(frameInicio.X.Scale, frameInicio.X.Offset + delta.X, frameInicio.Y.Scale, frameInicio.Y.Offset + delta.Y)
     end
 end)
-
-UserInput.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+UserInput.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
 end)
 
--- Arrastar bolinha
-local bolaDragging = false
-local bolaDragStart, bolaStart
-
-bola.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        bolaDragging = true
-        bolaDragStart = input.Position
-        bolaStart = bola.Position
+local bolaArrastando = false
+local bolaInicio, bolaPosInicio
+bola.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        bolaArrastando = true
+        bolaInicio = i.Position
+        bolaPosInicio = bola.Position
     end
 end)
-
-UserInput.InputChanged:Connect(function(input)
-    if bolaDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - bolaDragStart
-        bola.Position = UDim2.new(bolaStart.X.Scale, bolaStart.X.Offset + delta.X, bolaStart.Y.Scale, bolaStart.Y.Offset + delta.Y)
+UserInput.InputChanged:Connect(function(i)
+    if bolaArrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = i.Position - bolaInicio
+        bola.Position = UDim2.new(bolaPosInicio.X.Scale, bolaPosInicio.X.Offset + delta.X, bolaPosInicio.Y.Scale, bolaPosInicio.Y.Offset + delta.Y)
     end
 end)
-
-UserInput.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then bolaDragging = false end
+UserInput.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
 end)
 
--- Toggle Abas
-local function trocarAba(aba)
-    if aba == "Main" then
-        autoChestBtn.Visible = true
-        afkBtn.Visible = true
-        speedFrame.Visible = true
-        resetBtn.Visible = true
-        statusFrame.Visible = true
-        contadorText.Visible = true
-        autoBuyFrame.Visible = false
-        abaMainBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 120)
-        abaAutoBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    else
-        autoChestBtn.Visible = false
-        afkBtn.Visible = false
-        speedFrame.Visible = false
-        resetBtn.Visible = false
-        statusFrame.Visible = false
-        contadorText.Visible = false
-        autoBuyFrame.Visible = true
-        abaMainBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        abaAutoBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 120)
-    end
-end
-
-abaMainBtn.MouseButton1Click:Connect(function() trocarAba("Main") end)
-abaAutoBtn.MouseButton1Click:Connect(function() trocarAba("AutoBuy") end)
-
--- Minimizar/Fechar
 mini.MouseButton1Click:Connect(function()
-    frame.Visible = false
-    bola.Visible = true
-    avisar("📌 Minimizado")
+    if frame.Visible then
+        frame.Visible = false
+        bola.Visible = true
+        avisar("📌 Minimizado")
+    else
+        frame.Visible = true
+        bola.Visible = false
+        avisar("📂 Restaurado")
+    end
 end)
-
 fechar.MouseButton1Click:Connect(function()
     frame.Visible = false
     bola.Visible = true
     avisar("📁 Minimizado")
 end)
-
 bola.MouseButton1Click:Connect(function()
     frame.Visible = true
     bola.Visible = false
     avisar("📂 Restaurado")
 end)
 
--- Toggle Auto Chest
-autoChestBtn.MouseButton1Click:Connect(function()
-    autoChest = not autoChest
-    if autoChest then
-        autoChestBtn.Text = "🔍 Auto Chest: ON"
-        autoChestBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
+autoBtn.MouseButton1Click:Connect(function()
+    auto = not auto
+    if auto then
+        autoBtn.Text = "🔍 Auto Chest: ON"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
+        iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON")
+        avisar("✅ Auto Chest ON - Velocidade 50 - Pula nos baús!")
     else
-        autoChestBtn.Text = "🔍 Auto Chest: OFF"
-        autoChestBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        autoBtn.Text = "🔍 Auto Chest: OFF"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        if loop then task.cancel(loop) end
         statusText.Text = "⏸️ DESATIVADO"
         avisar("❌ Auto Chest OFF")
     end
 end)
 
--- Anti AFK
-local afkActive = false
-local afkLoop = nil
-
+local afkAtivo = false
+local afkLoop
 local function iniciarAFK()
-    if afkLoop then task.cancel(afkLoop) end
     afkLoop = task.spawn(function()
-        while afkActive do
+        while afkAtivo do
             task.wait(240)
-            if afkActive then
+            if afkAtivo then
                 local mouse = player:GetMouse()
                 if mouse then
                     local x = mouse.X
@@ -828,9 +587,9 @@ local function iniciarAFK()
                     mouse.Move(x, mouse.Y)
                 end
                 if hum then
-                    hum:MoveTo(rootPart.Position + Vector3.new(1, 0, 0))
-                    task.wait(0.2)
-                    hum:MoveTo(rootPart.Position)
+                    hum:MoveTo(hum.Parent:GetPivot().Position + Vector3.new(1, 0, 0))
+                    task.wait(0.1)
+                    hum:MoveTo(hum.Parent:GetPivot().Position)
                 end
             end
         end
@@ -838,44 +597,20 @@ local function iniciarAFK()
 end
 
 afkBtn.MouseButton1Click:Connect(function()
-    afkActive = not afkActive
-    if afkActive then
+    afkAtivo = not afkAtivo
+    if afkAtivo then
         afkBtn.Text = "💤 Anti-AFK: ON"
         afkBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarAFK()
-        avisar("💤 Anti-AFK ON")
+        avisar("💤 Anti-AFK ATIVADO")
     else
         afkBtn.Text = "💤 Anti-AFK: OFF"
         afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
         if afkLoop then task.cancel(afkLoop) end
-        avisar("💪 Anti-AFK OFF")
+        avisar("💤 Anti-AFK DESATIVADO")
     end
 end)
 
-resetBtn.MouseButton1Click:Connect(function()
-    setSpeed(16)
-    avisar("↺ Velocidade resetada para 16")
-end)
-
--- Iniciar
-task.spawn(function()
-    wait(1)
-    setSpeed(50)
-    deletarRuins()
-    print("✅ Chest Finder v14.0 - UI Reduzida!")
-    avisar("🚀 v14.0 - UI reduzida!")
-end)
-
--- Animação
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.05 do
-            local t = 0.5 + math.sin(i * math.pi) * 0.5
-            frame.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            if bola.Visible then
-                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            end
-            task.wait(0.05)
-        end
-    end
-end)
+-- Define a velocidade inicial para 50
+setSpeed(50)
+iniciarLoop()
