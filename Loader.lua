@@ -6,6 +6,7 @@ local UserInput = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
+local rootPart = char:WaitForChild("HumanoidRootPart")
 
 local auto = true
 local coletados = 0
@@ -115,20 +116,20 @@ local function acharChests()
     return lista
 end
 
--- ========== GUI (Baseada na versão vertical que funcionava) ==========
+-- ========== GUI ==========
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.ResetOnSpawn = false
 
--- Bolinha
+-- Bolinha (olho com risco 👁️‍🗨️)
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 45, 0, 45)
 bola.Position = UDim2.new(0, 10, 0, 100)
 bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-bola.Image = "rbxassetid://3926305904"
-bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
+bola.Image = "rbxassetid://6031094839"  -- Ícone de olho
+bola.ImageColor3 = Color3.fromRGB(200, 200, 200)
 bola.Visible = false
 bola.Parent = gui
 
@@ -136,9 +137,20 @@ local bolaC = Instance.new("UICorner")
 bolaC.CornerRadius = UDim.new(1, 0)
 bolaC.Parent = bola
 
--- Frame principal - HORIZONTAL (mais largo, menos alto)
+-- Texto do risco no olho (efeito visual)
+local risco = Instance.new("TextLabel")
+risco.Size = UDim2.new(1, 0, 1, 0)
+risco.BackgroundTransparency = 1
+risco.Text = "🚫"
+risco.TextColor3 = Color3.fromRGB(255, 50, 50)
+risco.TextSize = 30
+risco.TextWrapped = true
+risco.Visible = true
+risco.Parent = bola
+
+-- Frame principal - HORIZONTAL
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 500, 0, 160)  -- Largura 500, Altura 160
+frame.Size = UDim2.new(0, 500, 0, 160)
 frame.Position = UDim2.new(0.5, -250, 0.5, -80)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 frame.BackgroundTransparency = 0.05
@@ -233,9 +245,9 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- ========== CONTEÚDO DA ABA MAIN (ORGANIZADO EM LINHAS) ==========
+-- ========== CONTEÚDO DA ABA MAIN ==========
 
--- Linha 1: Auto Chest + Anti-AFK (lado a lado)
+-- Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 230, 0, 35)
 autoBtn.Position = UDim2.new(0, 10, 0, 40)
@@ -250,6 +262,7 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
+-- Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 230, 0, 35)
 afkBtn.Position = UDim2.new(1, -240, 0, 40)
@@ -264,7 +277,7 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- Linha 2: Velocidade + Reset
+-- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 350, 0, 40)
 speedFrame.Position = UDim2.new(0, 10, 0, 85)
@@ -336,7 +349,7 @@ local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
--- Linha 3: Status
+-- Status
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(0, 480, 0, 30)
 statusFrame.Position = UDim2.new(0.5, -240, 0, 128)
@@ -429,7 +442,7 @@ speedValueBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Notificação (igual à versão que funcionava)
+-- Notificação
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
 notifFrame.Position = UDim2.new(1, -270, 0, 50)
@@ -482,7 +495,33 @@ local function trocarAba(aba)
     end
 end
 
--- Arrastar UI (igual à versão que funcionava)
+-- ========== FUNÇÃO DE PULO ==========
+local function pular()
+    if hum and rootPart then
+        -- Verifica se está no chão antes de pular
+        local character = hum.Parent
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoidRootPart then
+            -- Aplica força de pulo
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = Vector3.new(0, 50, 0)
+            bodyVelocity.MaxForce = Vector3.new(0, 10000, 0)
+            bodyVelocity.Parent = humanoidRootPart
+            
+            -- Remove após 0.3 segundos
+            task.wait(0.3)
+            bodyVelocity:Destroy()
+            
+            -- Alternativa: usar o Jump do Humanoid
+            hum.Jump = true
+            task.wait(0.1)
+            hum.Jump = false
+        end
+    end
+end
+
+-- Arrastar UI
 local arrastando = false
 local arrastarInicio, frameInicio
 
@@ -620,23 +659,35 @@ resetBtn.MouseButton1Click:Connect(function()
     avisar("↺ Velocidade resetada para 16")
 end)
 
--- Loop de movimento (igual à versão que funcionava)
+-- Loop de movimento (COM PULO QUANDO CHEGA NO BAÚ)
 local loop
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+    
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
     local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
+    
     if ok and path.Status == Enum.PathStatus.Success then
         for _, wp in ipairs(path:GetWaypoints()) do
             if not auto then break end
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
+        
+        -- 🔥 PULA QUANDO CHEGA PERTO DO BAÚ (para alcançar baús no mar/plataformas)
+        local distToChest = (rootPart.Position - chest.pos).Magnitude
+        if distToChest < 15 then
+            pular()
+            task.wait(0.2)
+        end
+        
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
             statusText.Text = "✅ " .. chest.tipo .. " coletado!"
+            
+            -- Tenta clicar no baú
             local click = chest.obj:FindFirstChild("ClickDetector")
             if click then
                 click:Click()
@@ -674,8 +725,8 @@ task.spawn(function()
     setSpeed(50)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Versão Horizontal | Velocidade 50")
-    avisar("🚀 Versão Horizontal - Clique nos botões!")
+    print("✅ Chest Finder v13 - Com Pulo Automático | Velocidade 50")
+    avisar("🚀 Com pulo automático para pegar baús no mar!")
 end)
 
 -- Animação
