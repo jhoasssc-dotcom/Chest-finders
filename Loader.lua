@@ -113,15 +113,14 @@ local function acharChests()
     return lista
 end
 
--- ========== GUI ==========
+-- ========== GUI (baseada no script de teste que funcionou) ==========
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
 
--- Bolinha
+-- Bolinha minimizada
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -139,7 +138,7 @@ bolaC.Parent = bola
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 450, 0, 240)
 frame.Position = UDim2.new(0.5, -225, 0.5, -120)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(0, 255, 255)
@@ -150,7 +149,7 @@ local frameC = Instance.new("UICorner")
 frameC.CornerRadius = UDim.new(0, 10)
 frameC.Parent = frame
 
--- Barra de título
+-- Barra de título (para arrastar)
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 35)
 barra.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
@@ -172,7 +171,7 @@ titulo.Font = Enum.Font.GothamBold
 titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = barra
 
--- Botões de aba
+-- Botões de ABA
 local abaMainBtn = Instance.new("TextButton")
 abaMainBtn.Size = UDim2.new(0, 55, 0, 28)
 abaMainBtn.Position = UDim2.new(0.5, -75, 0, 4)
@@ -231,7 +230,7 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- ========== ABA MAIN ==========
+-- ========== CONTEÚDO DA ABA MAIN ==========
 -- Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 200, 0, 38)
@@ -463,7 +462,7 @@ local function trocarAba(aba)
     end
 end
 
--- Loop principal
+-- Loop de coleta
 local coletando = false
 local loopTask
 
@@ -557,7 +556,7 @@ local function iniciarAFK()
     end)
 end
 
--- ========== EVENTOS (USANDO MOUSEBUTTON1DOWN PARA MAIOR COMPATIBILIDADE) ==========
+-- ========== EVENTOS DOS BOTÕES (USANDO O MESMO MODO DO TESTE QUE FUNCIONOU) ==========
 
 -- Slider
 local sliderDrag = false
@@ -593,7 +592,7 @@ speedValueBtn.MouseButton1Down:Connect(function()
     end)
 end)
 
--- Arrastar frame
+-- Arrastar frame (pela barra)
 local arrastandoFrame = false
 local arrastarInicioFrame, frameInicio
 
@@ -639,31 +638,36 @@ UserInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then arrastandoBola = false end
 end)
 
--- Botões de navegação (MouseButton1Down)
+-- Botões de navegação
 abaMainBtn.MouseButton1Down:Connect(function()
+    print("✅ Aba Main clicada")
     trocarAba("Main")
     avisar("📱 Aba Main")
 end)
 
 abaAutoBtn.MouseButton1Down:Connect(function()
+    print("✅ Aba Auto Buy clicada")
     trocarAba("AutoBuy")
     avisar("🛒 Aba Auto Buy/Collect (v14.0)")
 end)
 
 -- Minimizar/Fechar
 mini.MouseButton1Down:Connect(function()
+    print("✅ Minimizar clicado")
     frame.Visible = false
     bola.Visible = true
     avisar("📌 Minimizado")
 end)
 
 fechar.MouseButton1Down:Connect(function()
+    print("✅ Fechar clicado")
     frame.Visible = false
     bola.Visible = true
     avisar("📁 Minimizado")
 end)
 
 bola.MouseButton1Down:Connect(function()
+    print("✅ Bolinha clicada")
     frame.Visible = true
     bola.Visible = false
     avisar("📂 Restaurado")
@@ -671,6 +675,7 @@ end)
 
 -- Auto Chest
 autoBtn.MouseButton1Down:Connect(function()
+    print("✅ Auto Chest clicado - Estado atual:", auto)
     auto = not auto
     if auto then
         autoBtn.Text = "🔍 Auto Chest: ON"
@@ -689,6 +694,7 @@ end)
 
 -- Anti-AFK
 afkBtn.MouseButton1Down:Connect(function()
+    print("✅ Anti-AFK clicado")
     afkAtivo = not afkAtivo
     if afkAtivo then
         afkBtn.Text = "💤 Anti-AFK: ON"
@@ -705,12 +711,31 @@ end)
 
 -- Reset
 resetBtn.MouseButton1Down:Connect(function()
+    print("✅ Reset clicado")
     setSpeed(16)
     avisar("↺ Velocidade resetada para 16")
 end)
 
--- Iniciar
+-- Iniciar tudo
 task.spawn(function()
     wait(1)
     setSpeed(50)
     deletarRuins()
+    iniciarLoop()
+    print("✅ Chest Finder v13 - Carregado! Todos os botões devem funcionar!")
+    avisar("🚀 Script carregado! Clique nos botões!")
+end)
+
+-- Animação da borda
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.05 do
+            local t = 0.5 + math.sin(i * math.pi) * 0.5
+            frame.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            if bola.Visible then
+                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            end
+            task.wait(0.05)
+        end
+    end
+end)
