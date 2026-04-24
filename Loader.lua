@@ -429,10 +429,8 @@ local function mover(chest)
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
-        -- ⬇️ PULO ADICIONADO ⬇️
         hum.Jump = true
         task.wait(0.3)
-        -- ⬆️ FIM DO PULO ⬆️
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
