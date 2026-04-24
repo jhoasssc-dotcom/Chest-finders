@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Só pega baús com contorno + PULO --]]
+--[[ Chest Finder v13.0 - Só pega baús com contorno (Highlight/SelectionBox) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -71,7 +71,9 @@ end
 
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
-    if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
+    if not (string.find(nome, "chest") or string.find(nome, "bau")) then
+        return false
+    end
     return temContorno(obj) and not isRuim(obj)
 end
 
@@ -110,7 +112,6 @@ local function acharChests()
     return lista
 end
 
--- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -288,7 +289,7 @@ UserInput.InputChanged:Connect(function(input)
 end)
 UserInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-)
+end)
 
 speedValueBtn.MouseButton1Click:Connect(function()
     local edit = Instance.new("TextBox")
@@ -417,7 +418,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔥 FUNÇÃO MOVER (APENAS COM O PULO ADICIONADO)
+-- Movimento (com PULO adicionado)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -429,8 +430,10 @@ local function mover(chest)
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
+        -- ⬇️ PULO ADICIONADO ⬇️
         hum.Jump = true
         task.wait(0.3)
+        -- ⬆️ FIM DO PULO ⬆️
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
@@ -449,7 +452,7 @@ local function mover(chest)
     end
 end
 
--- Loop (SEM ALTERAÇÕES)
+-- Loop
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -590,18 +593,20 @@ task.spawn(function()
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO + PULO")
-    avisar("🚀 Só pega baús com contorno | Pulo ao chegar")
+    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO")
+    avisar("🚀 Só pega baús com contorno | Deletando os outros")
 end)
 
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
             local t = 0.5 + math.sin(i * math.pi) * 0.5
-            borda.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            if bola.Visible then
-                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            end
+            pcall(function()
+                borda.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+                if bola.Visible then
+                    bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+                end
+            end)
             task.wait(0.05)
         end
     end
