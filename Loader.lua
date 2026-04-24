@@ -1,23 +1,35 @@
---[[ Chest Finder v13.2 - Só pega baús com contorno (Highlight/SelectionBox) + Pulo no baú + Velocidade 50 --]]
+--[[ Chest Finder v13.3 - Só pega baús com contorno + Pulo corrigido + Velocidade 50 --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
 local UserInput = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
+local rootPart = char:WaitForChild("HumanoidRootPart")
 
 local auto = true
 local coletados = 0
-local velocidade = 50 -- ALTERADO: 50 agora é o padrão
+local velocidade = 50
 
--- Função para dar pulo
+-- Função para dar pulo CORRIGIDA
 local function pular()
-    if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
+    if hum and hum.Health > 0 then
+        -- Para o movimento atual antes de pular
+        hum:MoveTo(rootPart.Position)
+        task.wait(0.05)
+        -- Força o pulo
         hum.Jump = true
         task.wait(0.1)
         hum.Jump = false
     end
+end
+
+-- Função para verificar se chegou perto o suficiente do baú
+local function chegouNoBaú(posicaoBaú)
+    local distancia = (rootPart.Position - posicaoBaú).Magnitude
+    return distancia < 5 -- Considera que chegou quando está a menos de 5 studs
 end
 
 local function setSpeed(s)
@@ -31,7 +43,7 @@ local function setSpeed(s)
     end
 end
 
--- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
+-- 🔍 Verifica se o objeto tem contorno
 local function temContorno(obj)
     if obj:FindFirstChildWhichIsA("Highlight") then
         return true
@@ -113,7 +125,7 @@ end
 
 local function acharChests()
     local lista = {}
-    local posChar = char:GetPivot().Position
+    local posChar = rootPart.Position
     for _, obj in ipairs(workspace:GetDescendants()) do
         if isPermitido(obj) and (obj:IsA("BasePart") or obj:IsA("Model")) then
             local pos = obj:IsA("Model") and obj:GetPivot().Position or obj.Position
@@ -133,7 +145,65 @@ local function acharChests()
     return lista
 end
 
--- GUI
+-- Função para coletar o baú
+local function coletarBaú(chest)
+    if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+        coletados = coletados + 1
+        contText.Text = "📊 Coletados: " .. coletados
+        avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
+        statusText.Text = "✅ " .. chest.tipo .. "!"
+        
+        -- Tenta clicar no baú
+        local click = chest.obj:FindFirstChild("ClickDetector")
+        if click then
+            click:Click()
+        else
+            local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
+            if parte then 
+                fireclickdetector(parte)
+            end
+        end
+    end
+end
+
+-- MOVIMENTO CORRIGIDO COM PULO
+local function mover(chest)
+    if not chest or not hum then return end
+    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+    
+    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
+    local ok = pcall(function() path:ComputeAsync(rootPart.Position, chest.pos) end)
+    
+    if ok and path.Status == Enum.PathStatus.Success then
+        -- Segue o caminho
+        for _, wp in ipairs(path:GetWaypoints()) do
+            if not auto then break end
+            hum:MoveTo(wp.Position)
+            hum.MoveToFinished:Wait(1)
+        end
+        
+        -- Aguarda chegar realmente perto do baú
+        local tempoEspera = 0
+        while not chegouNoBaú(chest.pos) and tempoEspera < 3 do
+            task.wait(0.1)
+            tempoEspera = tempoEspera + 0.1
+        end
+        
+        -- 🦘 DÁ O PULO QUANDO CHEGA NO BAÚ
+        if chegouNoBaú(chest.pos) then
+            pular()
+            task.wait(0.3)
+            coletarBaú(chest)
+        else
+            -- Tenta coletar mesmo assim
+            coletarBaú(chest)
+        end
+    else
+        statusText.Text = "⚠️ Caminho bloqueado!"
+    end
+end
+
+-- GUI (resumida, igual à sua versão anterior)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -180,7 +250,7 @@ local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, -60, 0, 30)
 titulo.Position = UDim2.new(0, 5, 0, 0)
 titulo.BackgroundTransparency = 1
-titulo.Text = "🎁 Chest Finder v13.2"
+titulo.Text = "🎁 Chest Finder v13.3"
 titulo.TextColor3 = Color3.fromRGB(0, 255, 255)
 titulo.TextSize = 12
 titulo.Font = Enum.Font.GothamBold
@@ -345,7 +415,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas\n🦘 Dá um pulo ao chegar no baú\n⚡ Velocidade padrão: 50"
+infoText.Text = "🔍 Só pega baús com CONTORNO\n🗑️ Deleta baús da loja\n🦘 PULA ao chegar no baú (!)\n⚡ Velocidade padrão: 50"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
@@ -440,41 +510,6 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- MOVIMENTO COM PULO
-local function mover(chest)
-    if not chest or not hum then return end
-    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
-    local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
-    if ok and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
-            if not auto then break end
-            hum:MoveTo(wp.Position)
-            hum.MoveToFinished:Wait(1)
-        end
-        
-        -- 🦘 PULA AO CHEGAR NO BAÚ
-        pular()
-        task.wait(0.2)
-        
-        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
-            coletados = coletados + 1
-            contText.Text = "📊 Coletados: " .. coletados
-            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. "!"
-            local click = chest.obj:FindFirstChild("ClickDetector")
-            if click then
-                click:Click()
-            else
-                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then fireclickdetector(parte) end
-            end
-        end
-    else
-        statusText.Text = "⚠️ Caminho bloqueado!"
-    end
-end
-
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -562,7 +597,7 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Velocidade 50 - Pula nos baús!")
+        avisar("✅ Auto Chest ON - Agora pula nos baús!")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -611,6 +646,5 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Define a velocidade inicial para 50
 setSpeed(50)
 iniciarLoop()
