@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Só pega baús com contorno (Highlight/SelectionBox) --]]
+--[[ Chest Finder v13.0 - Só pega baús com contorno + PULO --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -9,16 +9,7 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 50 -- ALTERADO: 16 para 50
-
--- 🔥 FUNÇÃO DE PULO ADICIONADA
-local function pular()
-    if hum and hum.Health > 0 and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
-        hum.Jump = true
-        task.wait(0.1)
-        hum.Jump = false
-    end
-end
+local velocidade = 16
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -31,14 +22,9 @@ local function setSpeed(s)
     end
 end
 
--- 🔍 Verifica se o objeto tem contorno (Highlight ou SelectionBox)
 local function temContorno(obj)
-    if obj:FindFirstChildWhichIsA("Highlight") then
-        return true
-    end
-    if obj:FindFirstChildWhichIsA("SelectionBox") then
-        return true
-    end
+    if obj:FindFirstChildWhichIsA("Highlight") then return true end
+    if obj:FindFirstChildWhichIsA("SelectionBox") then return true end
     if obj:IsA("Model") then
         for _, part in ipairs(obj:GetDescendants()) do
             if part:IsA("BasePart") and (part:FindFirstChildWhichIsA("Highlight") or part:FindFirstChildWhichIsA("SelectionBox")) then
@@ -49,7 +35,6 @@ local function temContorno(obj)
     return false
 end
 
--- 🚫 Lista de palavras proibidas (caso o contorno falhe)
 local proibidas = {
     "presente", "gratuito", "free", "gift", "reward", "recompensa", "brinde",
     "shop", "loja", "store", "buy", "comprar", "roblox", "robux", "premium", "vip",
@@ -57,16 +42,13 @@ local proibidas = {
     "yellow", "amarelo", "gold", "dourado", "group", "grupo", "daily", "weekly", "bonus"
 }
 
--- Verifica se é baú ruim (por nome ou preço)
 local function isRuim(obj)
     local current = obj
     for i = 1, 5 do
         if not current then break end
         local nome = string.lower(current.Name or "")
         for _, p in ipairs(proibidas) do
-            if string.find(nome, p) then
-                return true
-            end
+            if string.find(nome, p) then return true end
         end
         if current:FindFirstChild("Price") or current:FindFirstChild("RobuxPrice") or current:FindFirstChild("Cost") then
             return true
@@ -76,27 +58,20 @@ local function isRuim(obj)
     return false
 end
 
--- 🗑️ Deleta baús ruins (sem contorno e com palavras proibidas)
 local function deletarRuins()
-    local deletados = 0
     for _, obj in ipairs(workspace:GetDescendants()) do
         local nome = string.lower(obj.Name or "")
         if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
             if not temContorno(obj) and isRuim(obj) then
                 pcall(function() obj:Destroy() end)
-                deletados = deletados + 1
             end
         end
     end
-    if deletados > 0 then print("🗑️ Deletados", deletados, "baús sem contorno") end
 end
 
--- ✅ Verifica se o baú é válido (tem contorno E não é ruim)
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
-    if not (string.find(nome, "chest") or string.find(nome, "bau")) then
-        return false
-    end
+    if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
     return temContorno(obj) and not isRuim(obj)
 end
 
@@ -182,7 +157,7 @@ local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, -60, 0, 30)
 titulo.Position = UDim2.new(0, 5, 0, 0)
 titulo.BackgroundTransparency = 1
-titulo.Text = "🎁 Chest Finder v13.0 + Pulo"
+titulo.Text = "🎁 Chest Finder v13"
 titulo.TextColor3 = Color3.fromRGB(0, 255, 255)
 titulo.TextSize = 12
 titulo.Font = Enum.Font.GothamBold
@@ -313,7 +288,7 @@ UserInput.InputChanged:Connect(function(input)
 end)
 UserInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-end)
+)
 
 speedValueBtn.MouseButton1Click:Connect(function()
     local edit = Instance.new("TextBox")
@@ -347,7 +322,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas\n🦘 Dá um pulo ao chegar no baú"
+infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO (Highlight)\n🗑️ Deleta baús da loja e recompensas"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
@@ -401,7 +376,7 @@ local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 90, 0, 28)
 resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
 resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Resetar (50)"
+resetBtn.Text = "↺ Resetar (16)"
 resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
@@ -411,7 +386,7 @@ local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
-resetBtn.MouseButton1Click:Connect(function() setSpeed(50) end)
+resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
 
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
@@ -442,7 +417,7 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔥 MOVIMENTO MODIFICADO - ADICIONADO O PULO
+-- 🔥 FUNÇÃO MOVER (APENAS COM O PULO ADICIONADO)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -454,11 +429,10 @@ local function mover(chest)
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
-        
-        -- 🔥 PULO ADICIONADO AQUI
-        pular()
-        task.wait(0.2)
-        
+        -- ⬇️ PULO ADICIONADO ⬇️
+        hum.Jump = true
+        task.wait(0.3)
+        -- ⬆️ FIM DO PULO ⬆️
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
@@ -477,6 +451,7 @@ local function mover(chest)
     end
 end
 
+-- Loop (SEM ALTERAÇÕES)
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -574,7 +549,6 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Anti AFK
 local afkAtivo = false
 local afkLoop
 local function iniciarAFK()
@@ -590,29 +564,47 @@ local function iniciarAFK()
                     mouse.Move(x, mouse.Y)
                 end
                 if hum then
-                    hum:MoveTo(hum.Parent:GetPivot().Position + Vector3.new(1, 0, 0))
-                    task.wait(0.1)
-                    hum:MoveTo(hum.Parent:GetPivot().Position)
+                    hum:MoveTo(char:GetPivot().Position + Vector3.new(1, 0, 0))
+                    task.wait(0.2)
+                    hum:MoveTo(char:GetPivot().Position)
                 end
             end
         end
     end)
 end
-
 afkBtn.MouseButton1Click:Connect(function()
     afkAtivo = not afkAtivo
     if afkAtivo then
         afkBtn.Text = "💤 Anti-AFK: ON"
         afkBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarAFK()
-        avisar("💤 Anti-AFK ATIVADO")
+        avisar("💤 Anti-AFK ON")
     else
         afkBtn.Text = "💤 Anti-AFK: OFF"
         afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
         if afkLoop then task.cancel(afkLoop) end
-        avisar("💤 Anti-AFK DESATIVADO")
+        avisar("💪 Anti-AFK OFF")
     end
 end)
 
-setSpeed(50)
-iniciarLoop()
+task.spawn(function()
+    wait(2)
+    setSpeed(16)
+    deletarRuins()
+    iniciarLoop()
+    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO + PULO")
+    avisar("🚀 Só pega baús com contorno | Pulo ao chegar")
+end)
+
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.05 do
+            local t = 0.5 + math.sin(i * math.pi) * 0.5
+            borda.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            if bola.Visible then
+                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
+            end
+            task.wait(0.05)
+        end
+    end
+end)
