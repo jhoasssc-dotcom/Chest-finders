@@ -434,7 +434,7 @@ end
 -- Movimento (com PULO)
 local function mover(chest)
     if not chest or not hum then return end
-    if statusText then statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)" end
+    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
     local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
     if ok and path.Status == Enum.PathStatus.Success then
@@ -443,14 +443,15 @@ local function mover(chest)
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
-        -- PULO
+        -- ⬇️ ADICIONE ESTAS 2 LINHAS ⬇️
         hum.Jump = true
         task.wait(0.3)
+        -- ⬆️ FIM DA ADIÇÃO ⬆️
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
-            if contText then contText.Text = "📊 Coletados: " .. coletados end
+            contText.Text = "📊 Coletados: " .. coletados
             avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            if statusText then statusText.Text = "✅ " .. chest.tipo .. "!" end
+            statusText.Text = "✅ " .. chest.tipo .. "!"
             local click = chest.obj:FindFirstChild("ClickDetector")
             if click then
                 click:Click()
@@ -460,10 +461,9 @@ local function mover(chest)
             end
         end
     else
-        if statusText then statusText.Text = "⚠️ Caminho bloqueado!" end
+        statusText.Text = "⚠️ Caminho bloqueado!"
     end
 end
-
 -- Loop
 local loop
 local function iniciarLoop()
