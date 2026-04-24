@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Só pega baús com contorno (Highlight/SelectionBox) --]]
+--[[ Chest Finder v13.0 - Velocidade 50 + PULO --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -9,7 +9,7 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 16
+local velocidade = 50  -- ⬅️ ALTERADO de 16 para 50
 
 local function setSpeed(s)
     velocidade = math.clamp(s, 10, 100)
@@ -112,6 +112,7 @@ local function acharChests()
     return lista
 end
 
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -289,7 +290,7 @@ UserInput.InputChanged:Connect(function(input)
 end)
 UserInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-end)
+)
 
 speedValueBtn.MouseButton1Click:Connect(function()
     local edit = Instance.new("TextBox")
@@ -377,7 +378,7 @@ local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 90, 0, 28)
 resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
 resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Resetar (16)"
+resetBtn.Text = "↺ Resetar (50)"
 resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
@@ -387,7 +388,7 @@ local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
-resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
+resetBtn.MouseButton1Click:Connect(function() setSpeed(50) end)
 
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
@@ -590,11 +591,11 @@ end)
 
 task.spawn(function()
     wait(2)
-    setSpeed(16)
+    setSpeed(50)  -- ⬅️ ALTERADO de 16 para 50
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13 - Só pega baús com CONTORNO BRANCO")
-    avisar("🚀 Só pega baús com contorno | Deletando os outros")
+    print("✅ Chest Finder v13 - Velocidade 50 + PULO")
+    avisar("🚀 Velocidade 50 | Pulo automático ao chegar no baú")
 end)
 
 task.spawn(function()
